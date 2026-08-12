@@ -1,17 +1,21 @@
 # 部署总览（Mac Studio）
 
-## 端口与域名
+## 本机端口与 Tunnel 名
 
-| 服务 | 本地 | Tunnel 名 | 公网 |
-|------|------|-----------|------|
-| 事故车提醒 | 127.0.0.1:9000 | accident-vehicle-reminder | http://127.0.0.1:9000 |
-| VIP 保养提醒 | 127.0.0.1:9002 | m-hero-vip-alert | http://127.0.0.1:9002 |
-| 区域报表 | 127.0.0.1:9003 | m-hero-district-form | http://127.0.0.1:9003 |
-| 门店超时审计 | 127.0.0.1:3001 | store-audit | http://127.0.0.1:3001 |
-| 超时机器人统计 | 127.0.0.1:5001 | store-timeout-cleaner | http://127.0.0.1:5001 |
-| 控制台黄页 | 127.0.0.1:9004 | m-hero-hub | http://127.0.0.1:9004 |
+公网 hostname **不要**写进 Git；在本机 `~/.cloudflared/config-*.yml` 与 DNS 中配置。
 
-Cloudflared 配置一般在 `~/.cloudflared/config-*.yml`。
+| 服务 | 本地 | Tunnel 名（示例） |
+|------|------|-------------------|
+| 事故车提醒 | 127.0.0.1:9000 | accident-vehicle-reminder |
+| VIP 保养提醒 | 127.0.0.1:9002 | m-hero-vip-alert |
+| 区域报表 | 127.0.0.1:9003 | m-hero-district-form |
+| 门店超时审计 | 127.0.0.1:3001 | store-audit |
+| 超时机器人统计 | 127.0.0.1:5001 | store-timeout-cleaner |
+| 控制台黄页 | 127.0.0.1:9004 | m-hero-hub |
+
+仓库内 `deploy/*.yml.example` 的 `hostname` 使用占位符 `<your-hostname>`。
+
+黄页公网跳转列表放在未入库文件：`m-hero-hub/config/services.local.json`（参见同目录 `*.example`）。
 
 ## launchd（节选）
 

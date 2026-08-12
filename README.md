@@ -11,7 +11,7 @@
 | [本页](README.md) | 总览、入口表、依赖关系 |
 | [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) | 项目依赖与数据流（详细） |
 | [docs/SHARED_DMS_BROWSER.md](docs/SHARED_DMS_BROWSER.md) | 共享 Chromium / 强刷 / 时刻表（权威说明） |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 本机端口、公网域名、launchd / tunnel |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 本机端口、launchd / tunnel（不含公网域名） |
 
 ### 各项目文档入口
 
@@ -25,25 +25,25 @@
 | [m-hero-hub](https://github.com/kaisonlau8/m-hero-hub) | [README](m-hero-hub/README.md) | — |
 | feishu-bitable-middleware（软链） | 见原仓库 | 门店审计依赖的本地中间件包 |
 
-## 控制台与公网入口
+## 控制台入口（仅本地）
 
-黄页：http://127.0.0.1:9004 （本地 `:9004`）
+公网域名经 Cloudflare Tunnel 配置，**不写入本仓库**。本地默认：
 
-| 系统 | 本地 | 公网 | 仓库 |
-|------|------|------|------|
-| 事故车提醒 | `:9000` | http://127.0.0.1:9000 | accident-vehicle-reminder |
-| VIP 保养提醒 | `:9002` | http://127.0.0.1:9002 | m-hero-vip-custom-alert |
-| 区域报表 | `:9003` | http://127.0.0.1:9003 | mhero_district_form |
-| 门店超时审计 | `:3001` | http://127.0.0.1:3001 | m-hero-store-timeout-audit |
-| 超时机器人统计 | `:5001` | http://127.0.0.1:5001 | store-timeout-cleaner |
-| 控制台黄页 | `:9004` | http://127.0.0.1:9004 | m-hero-hub |
+| 系统 | 本地 | 仓库 |
+|------|------|------|
+| 事故车提醒 | `http://127.0.0.1:9000` | accident-vehicle-reminder |
+| VIP 保养提醒 | `http://127.0.0.1:9002` | m-hero-vip-custom-alert |
+| 区域报表 | `http://127.0.0.1:9003` | mhero_district_form |
+| 门店超时审计 | `http://127.0.0.1:3001` | m-hero-store-timeout-audit |
+| 超时机器人统计 | `http://127.0.0.1:5001` | store-timeout-cleaner |
+| 控制台黄页 | `http://127.0.0.1:9004` | m-hero-hub |
 
 ## 项目依赖关系（简图）
 
 ```mermaid
 flowchart TB
   subgraph users [使用者]
-    OA[<your-hostname> 黄页]
+    OA[控制台黄页 :9004]
   end
 
   subgraph dms_shared [共享 DMS 会话]
