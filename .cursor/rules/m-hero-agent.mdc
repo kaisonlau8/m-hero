@@ -1,0 +1,17 @@
+---
+description: m-hero 工具集 Agent 总规则（共享浏览器、禁公网域名入库、多仓结构）
+alwaysApply: true
+---
+
+# m-hero Agent
+
+开工先读根目录 [AGENTS.md](../../AGENTS.md)。
+
+## 必须遵守
+
+- 多仓并列：业务改动在对应子目录的独立 Git 仓内处理；顶层仓主要是总览文档
+- 禁止把公网域名 / Tunnel hostname 写入可提交文件；只用本地端口或 `<your-hostname>`
+- 事故车 / VIP / 区域报表共用 `DFMC_DMS_SESSION_HOME`；改保活或时刻表先读 `docs/SHARED_DMS_BROWSER.md`
+- 勿并行 DMS 导出；勿随意断开共享浏览器会话
+- 不提交 `.env`、密钥、含手机号的联系人表
+- 对用户使用简体中文；未要求不要 commit/push

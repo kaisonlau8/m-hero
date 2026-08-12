@@ -8,6 +8,7 @@
 
 | 文档 | 说明 |
 |------|------|
+| [AGENTS.md](AGENTS.md) | **AI Agent 开工说明**（约束、速查、时刻表摘要） |
 | [本页](README.md) | 总览、入口表、依赖关系 |
 | [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) | 项目依赖与数据流（详细） |
 | [docs/SHARED_DMS_BROWSER.md](docs/SHARED_DMS_BROWSER.md) | 共享 Chromium、**爬取时刻表**、强刷保护（权威说明） |
