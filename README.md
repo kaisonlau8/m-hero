@@ -10,7 +10,7 @@
 |------|------|
 | [本页](README.md) | 总览、入口表、依赖关系 |
 | [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) | 项目依赖与数据流（详细） |
-| [docs/SHARED_DMS_BROWSER.md](docs/SHARED_DMS_BROWSER.md) | 共享 Chromium / 强刷 / 时刻表（权威说明） |
+| [docs/SHARED_DMS_BROWSER.md](docs/SHARED_DMS_BROWSER.md) | 共享 Chromium、**爬取时刻表**、强刷保护（权威说明） |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 本机端口、launchd / tunnel（不含公网域名） |
 
 ### 各项目文档入口
