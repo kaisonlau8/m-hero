@@ -1,0 +1,117 @@
+# 猛士服务运营（m-hero）工具集
+
+本目录汇总猛士科技服务运营侧的内部工具：DMS 爬虫、飞书通知、区域报表、门店超时相关控制台，以及统一黄页入口。
+
+> 各业务仍是**独立 Git 仓库**；本仓库（`m-hero`）提供文档地图、依赖关系与部署总览。代码以子目录方式并列检出。
+
+## 文档地图
+
+| 文档 | 说明 |
+|------|------|
+| [本页](README.md) | 总览、入口表、依赖关系 |
+| [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) | 项目依赖与数据流（详细） |
+| [docs/SHARED_DMS_BROWSER.md](docs/SHARED_DMS_BROWSER.md) | 共享 Chromium / 强刷 / 时刻表（权威说明） |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 本机端口、公网域名、launchd / tunnel |
+
+### 各项目文档入口
+
+| 项目 | README | 补充文档 |
+|------|--------|----------|
+| [accident-vehicle-reminder](https://github.com/kaisonlau8/accident-vehicle-reminder) | [README](accident-vehicle-reminder/README.md) | [运维](accident-vehicle-reminder/docs/operations.md) · [共享浏览器](accident-vehicle-reminder/docs/shared-browser-session.md) |
+| [m-hero-vip-custom-alert](https://github.com/kaisonlau8/m-hero-vip-custom-alert) | [README](m-hero-vip-custom-alert/README.md) | [部署](m-hero-vip-custom-alert/docs/deploy-mac-studio.md) · [共享浏览器](m-hero-vip-custom-alert/docs/shared-browser-session.md) |
+| [mhero_district_form](https://github.com/kaisonlau8/mhero_district_form) | [README](mhero_district_form/README.md) | [使用](mhero_district_form/docs/usage.md) · [开发](mhero_district_form/docs/development.md) |
+| [m-hero-store-timeout-audit](https://github.com/kaisonlau8/m-hero-store-timeout-audit) | [README](m-hero-store-timeout-audit/README.md) | — |
+| [store-timeout-cleaner](https://github.com/kaisonlau8/store-timeout-cleaner) | [README](store-timeout-cleaner/README.md) | — |
+| [m-hero-hub](https://github.com/kaisonlau8/m-hero-hub) | [README](m-hero-hub/README.md) | — |
+| feishu-bitable-middleware（软链） | 见原仓库 | 门店审计依赖的本地中间件包 |
+
+## 控制台与公网入口
+
+黄页：http://127.0.0.1:9004 （本地 `:9004`）
+
+| 系统 | 本地 | 公网 | 仓库 |
+|------|------|------|------|
+| 事故车提醒 | `:9000` | http://127.0.0.1:9000 | accident-vehicle-reminder |
+| VIP 保养提醒 | `:9002` | http://127.0.0.1:9002 | m-hero-vip-custom-alert |
+| 区域报表 | `:9003` | http://127.0.0.1:9003 | mhero_district_form |
+| 门店超时审计 | `:3001` | http://127.0.0.1:3001 | m-hero-store-timeout-audit |
+| 超时机器人统计 | `:5001` | http://127.0.0.1:5001 | store-timeout-cleaner |
+| 控制台黄页 | `:9004` | http://127.0.0.1:9004 | m-hero-hub |
+
+## 项目依赖关系（简图）
+
+```mermaid
+flowchart TB
+  subgraph users [使用者]
+    OA[<your-hostname> 黄页]
+  end
+
+  subgraph dms_shared [共享 DMS 会话]
+    SES["/Users/i/dms-shared-session\nChromium + CDP + keepalive\ncrawl_schedule / crawl_registry"]
+  end
+
+  subgraph crawlers [DMS 爬虫族]
+    ACC[accident-vehicle-reminder\n:9000 · 10:00 / 17:00]
+    VIP[m-hero-vip-custom-alert\n:9002 · 09:00]
+    DIST[mhero_district_form\n:9003 · 08:30]
+  end
+
+  subgraph timeout [门店超时族]
+    AUDIT[m-hero-store-timeout-audit\n:3001]
+    CLEAN[store-timeout-cleaner\n:5001]
+    MID[feishu-bitable-middleware]
+  end
+
+  subgraph external [外部系统]
+    DMS[猛士 DMS]
+    FS[飞书 / 多维表格]
+  end
+
+  OA --> ACC & VIP & DIST & AUDIT & CLEAN
+  ACC & VIP & DIST --> SES
+  SES --> DMS
+  ACC & VIP --> FS
+  DIST -->|Webhook 群机器人| FS
+  AUDIT --> MID --> FS
+  CLEAN -.->|统计数据独立| CLEAN
+```
+
+要点：
+
+1. **事故车 / VIP / 区域报表** 共用一套 Playwright Chromium 与保活强刷；由时刻表 + 爬取登记保护，避免强刷打断导出。详见 [SHARED_DMS_BROWSER.md](docs/SHARED_DMS_BROWSER.md)。
+2. **门店超时审计** 走 Node + 飞书多维表，**不**使用 DMS 浏览器；依赖 `feishu-bitable-middleware`。
+3. **超时机器人统计** 为独立 Flask 解析/统计控制台，不爬 DMS。
+4. **黄页** 只做入口聚合与本地探活，无业务数据依赖。
+
+更细的依赖说明见 [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md)。
+
+## 本机目录约定
+
+```text
+/Users/i/myCode/m-hero/
+  README.md                 # 本文件
+  docs/                     # 总文档
+  accident-vehicle-reminder/
+  m-hero-vip-custom-alert/
+  mhero_district_form/
+  m-hero-store-timeout-audit/
+  store-timeout-cleaner/
+  m-hero-hub/
+  feishu-bitable-middleware -> ../feishu-bitable-middleware
+
+/Users/i/dms-shared-session/   # 共享浏览器会话（不进 Git）
+```
+
+## 检出各仓库
+
+```bash
+mkdir -p ~/myCode/m-hero && cd ~/myCode/m-hero
+git clone https://github.com/kaisonlau8/m-hero.git .
+# 或仅拉文档后，再并列 clone 各业务仓：
+git clone https://github.com/kaisonlau8/accident-vehicle-reminder.git
+git clone https://github.com/kaisonlau8/m-hero-vip-custom-alert.git
+git clone https://github.com/kaisonlau8/mhero_district_form.git
+git clone https://github.com/kaisonlau8/m-hero-store-timeout-audit.git
+git clone https://github.com/kaisonlau8/store-timeout-cleaner.git
+git clone https://github.com/kaisonlau8/m-hero-hub.git
+```

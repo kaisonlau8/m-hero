@@ -1,0 +1,11 @@
+.DS_Store
+**/.DS_Store
+
+# 业务仓并列检出，不纳入本「文档总览」仓库
+accident-vehicle-reminder/
+m-hero-vip-custom-alert/
+mhero_district_form/
+m-hero-store-timeout-audit/
+store-timeout-cleaner/
+m-hero-hub/
+feishu-bitable-middleware/
