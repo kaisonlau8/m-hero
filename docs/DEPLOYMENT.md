@@ -26,6 +26,7 @@
 | `com.mhero-district-form.web` | 区域报表控制台 |
 | `com.mhero-district-form.pipeline` | 每天 08:30 流水线 |
 | `com.store-timeout-cleaner.web` | 超时机器人统计 |
+| `com.store-timeout-cleaner.sync` | 每天 00:00 / 12:00 从 SCRM 同步客户群 |
 | `com.m-hero-hub.web` | 黄页 |
 | `com.cloudflare.cloudflared.*` | 各隧道 |
 

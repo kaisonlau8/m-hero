@@ -66,6 +66,7 @@ flowchart TB
   subgraph external [外部系统]
     DMS[猛士 DMS]
     FS[飞书 / 多维表格]
+    SCRM[企微 SCRM]
   end
 
   OA --> ACC & VIP & DIST & CLEAN
@@ -74,14 +75,14 @@ flowchart TB
   ACC & VIP --> FS
   DIST -->|Webhook 群机器人| FS
   AUDIT --> MID --> FS
-  CLEAN -.->|统计数据独立| CLEAN
+  CLEAN --> SCRM
 ```
 
 要点：
 
 1. **事故车 / VIP / 区域报表** 共用一套 Playwright Chromium 与保活强刷；由时刻表 + 爬取登记保护，避免强刷打断导出。详见 [SHARED_DMS_BROWSER.md](docs/SHARED_DMS_BROWSER.md)。
 2. **门店超时审计** 已于 2026-08-13 下线（原 `:3001` / pm2 `store-audit`）；代码仓保留，不再跑服务。
-3. **超时机器人统计** 为独立 Flask 解析/统计控制台，不爬 DMS。
+3. **超时机器人统计** 调企微 SCRM OpenAPI 拉客户群，不爬 DMS。
 4. **黄页** 只做入口聚合与本地探活，无业务数据依赖。
 5. **scrm-api** 是企微 SCRM 生产 OpenAPI 文档仓，无本地 HTTP 服务；凭证只放该仓 `.env`。
 

@@ -25,7 +25,7 @@
 | `m-hero-vip-custom-alert/` | `:9002` | VIP 保养提醒 09:00 | 共享会话 |
 | `mhero_district_form/` | `:9003` | 区域报表 08:30 | 共享会话（只附着） |
 | `m-hero-store-timeout-audit/` | — | **已下线**（原 `:3001` / pm2 `store-audit`） | 不用 |
-| `store-timeout-cleaner/` | `:5001` | 超时机器人统计 | 不用 |
+| `store-timeout-cleaner/` | `:5001` | 超时机器人统计（SCRM 00:00 / 12:00） | 不用 |
 | `m-hero-hub/` | `:9004` | 控制台黄页 | 不用 |
 | `scrm-api/` | — | 企微 SCRM OpenAPI 文档（只对接生产） | 不用 |
 | `feishu-bitable-middleware` | 软链 | 原审计依赖的中间件 | 不用 |

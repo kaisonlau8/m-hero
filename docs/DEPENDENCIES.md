@@ -8,7 +8,7 @@
 | m-hero-vip-custom-alert | Python / Flask | — | DMS、飞书多维表 / HeroClaw | `dms-shared-session` |
 | mhero_district_form | Python / Flask + FastAPI | — | DMS、飞书群 Webhook | `dms-shared-session` |
 | m-hero-store-timeout-audit | **已下线** | 原依赖 feishu-bitable-middleware | — | — |
-| store-timeout-cleaner | Python / Flask | — | 本地上传 Excel | — |
+| store-timeout-cleaner | Python / Flask | scrm-api（接口文档 / 可回读其 `.env`） | 企微 SCRM 生产 OpenAPI | — |
 | m-hero-hub | Python / Flask | 无代码依赖，仅链接各控制台 URL | Cloudflare Tunnel | — |
 | scrm-api | 文档仓（无服务） | — | 企微 SCRM 生产 OpenAPI | — |
 
@@ -76,9 +76,15 @@ DMS × 7 份源表（08:30）
 ### 超时机器人统计
 
 ```text
-上传 Excel / 历史数据
-  → Flask 解析统计
-  → data.json + 控制台展示 / CSV 导出
+企微 SCRM OpenAPI
+  → /openapi/chat/group/list（全量客户群）
+  → 群成员含刘明轩（已拉超时提醒机器人）
+  → 群主部门路径归店 / 战区
+  → data.json + 控制台拉群覆盖 / CSV
+管家「回复超时记录」Excel（文件名带时间范围）
+  → input_file/ 或控制台上传
+  → timeout.db 登记区间 + 曲线图
+  拉群定时：每天 00:00 / 12:00（launchd `com.store-timeout-cleaner.sync`）
 （不访问 DMS，不依赖共享浏览器）
 ```
 
@@ -113,4 +119,4 @@ DMS × 7 份源表（08:30）
 - 黄页 ↔ 各业务：仅 HTTP 探活与超链接，业务可独立运行。
 - 超时审计（已下线）↔ 超时机器人统计：业务相关但代码/数据不互通。
 - 区域报表桌面 App / FastAPI `:8000`：与控制台 `:9003` 流水线并行存在，共享 `app/processor`。
-- scrm-api ↔ 各控制台：无运行时依赖，仅同属工具集文档。
+- scrm-api ↔ 超时机器人统计：运行时调 SCRM OpenAPI；`scrm-api` 仓本身仍是文档，统计服务可回读其 `.env`。
