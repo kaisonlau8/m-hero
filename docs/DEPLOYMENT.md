@@ -9,7 +9,6 @@
 | 事故车提醒 | 127.0.0.1:9000 | accident-vehicle-reminder |
 | VIP 保养提醒 | 127.0.0.1:9002 | m-hero-vip-alert |
 | 区域报表 | 127.0.0.1:9003 | m-hero-district-form |
-| 门店超时审计 | 127.0.0.1:3001 | store-audit |
 | 超时机器人统计 | 127.0.0.1:5001 | store-timeout-cleaner |
 | 控制台黄页 | 127.0.0.1:9004 | m-hero-hub |
 
@@ -30,7 +29,9 @@
 | `com.m-hero-hub.web` | 黄页 |
 | `com.cloudflare.cloudflared.*` | 各隧道 |
 
-门店超时审计当前多用 **pm2**（`store-audit`）而非 launchd。
+门店超时审计已于 2026-08-13 下线（原 `:3001` / pm2 `store-audit` / 系统级 `com.cloudflare.cloudflared`）。勿再 `pm2 start`。若系统隧道仍在跑：`sudo cloudflared service uninstall`。
+
+`scrm-api` 为文档仓，无 launchd / 本地端口。
 
 ## 共享会话
 

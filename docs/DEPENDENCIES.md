@@ -7,9 +7,10 @@
 | accident-vehicle-reminder | Python / Flask | — | DMS、飞书应用 | `dms-shared-session` |
 | m-hero-vip-custom-alert | Python / Flask | — | DMS、飞书多维表 / HeroClaw | `dms-shared-session` |
 | mhero_district_form | Python / Flask + FastAPI | — | DMS、飞书群 Webhook | `dms-shared-session` |
-| m-hero-store-timeout-audit | Node / Express / Vue | feishu-bitable-middleware（本地包） | 飞书多维表 | — |
+| m-hero-store-timeout-audit | **已下线** | 原依赖 feishu-bitable-middleware | — | — |
 | store-timeout-cleaner | Python / Flask | — | 本地上传 Excel | — |
 | m-hero-hub | Python / Flask | 无代码依赖，仅链接各控制台 URL | Cloudflare Tunnel | — |
+| scrm-api | 文档仓（无服务） | — | 企微 SCRM 生产 OpenAPI | — |
 
 ## 共享 DMS 浏览器（运行时耦合）
 
@@ -68,15 +69,9 @@ DMS × 7 份源表（08:30）
   → 飞书群 Webhook（下载链接）
 ```
 
-### 门店超时审计
+### 门店超时审计（已下线）
 
-```text
-store_list.xlsx（主数据）
-  ↔ 飞书「门店清单」多维表（自动同步）
-  ↔ 飞书「超时提醒专属名称」
-  → 未登记比对 → 督导私聊 + 仪表板
-依赖：feishu-bitable-middleware
-```
+2026-08-13 起不再运行。原数据流：xlsx ↔ 飞书多维表 → 未登记比对 → 督导私聊 + 仪表板；依赖 `feishu-bitable-middleware`。
 
 ### 超时机器人统计
 
@@ -93,6 +88,10 @@ store_list.xlsx（主数据）
 探活各控制台本地端口
   → 展示在线状态 + 跳转链接（公网 URL 来自未入库 local 配置）
 ```
+
+### 企微 SCRM OpenAPI（scrm-api）
+
+文档仓，无本地端口、不爬 DMS。定开 `/v3/m-hero/open/...` 与基线 `/openapi/...` 均只对接生产；凭证在 `scrm-api/.env`（不入库）。
 
 ## 错峰与互斥（时刻表）
 
@@ -112,5 +111,6 @@ store_list.xlsx（主数据）
 ## 不构成依赖的关系
 
 - 黄页 ↔ 各业务：仅 HTTP 探活与超链接，业务可独立运行。
-- 超时审计 ↔ 超时机器人统计：业务相关但代码/数据不互通。
+- 超时审计（已下线）↔ 超时机器人统计：业务相关但代码/数据不互通。
 - 区域报表桌面 App / FastAPI `:8000`：与控制台 `:9003` 流水线并行存在，共享 `app/processor`。
+- scrm-api ↔ 各控制台：无运行时依赖，仅同属工具集文档。

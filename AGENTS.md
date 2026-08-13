@@ -24,10 +24,11 @@
 | `accident-vehicle-reminder/` | `:9000` | 事故车提醒 10:00 / 17:00 | 共享会话（可启停保活） |
 | `m-hero-vip-custom-alert/` | `:9002` | VIP 保养提醒 09:00 | 共享会话 |
 | `mhero_district_form/` | `:9003` | 区域报表 08:30 | 共享会话（只附着） |
-| `m-hero-store-timeout-audit/` | `:3001` | 门店超时登记审计 | 不用 |
+| `m-hero-store-timeout-audit/` | — | **已下线**（原 `:3001` / pm2 `store-audit`） | 不用 |
 | `store-timeout-cleaner/` | `:5001` | 超时机器人统计 | 不用 |
 | `m-hero-hub/` | `:9004` | 控制台黄页 | 不用 |
-| `feishu-bitable-middleware` | 软链 | 审计依赖的中间件 | 不用 |
+| `scrm-api/` | — | 企微 SCRM OpenAPI 文档（只对接生产） | 不用 |
+| `feishu-bitable-middleware` | 软链 | 原审计依赖的中间件 | 不用 |
 
 共享会话目录（不进 Git）：`/Users/i/dms-shared-session`  
 环境变量：`DFMC_DMS_SESSION_HOME`、`DFMC_DMS_BROWSER_EXECUTABLE`、`TZ=Asia/Shanghai`
@@ -63,7 +64,7 @@
 | 改 DMS 爬虫 / 保活 / 时刻表 | `docs/SHARED_DMS_BROWSER.md` → 对应仓 `scripts/` |
 | 改区域报表模板或流水线 | `mhero_district_form/README.md`、`app/processor.py`、`scripts/run_pipeline.py` |
 | 改黄页收录 | `m-hero-hub/app.py` + 本地 `config/services.local.json` |
-| 改超时审计 | `m-hero-store-timeout-audit/`（Node + pm2） |
+| 查企微 SCRM 接口 | `scrm-api/README.md`、`docs/custom-openapi.md` / `docs/baseline-openapi.md` |
 | 部署 / launchd | `docs/DEPLOYMENT.md`、各仓 `deploy/*.plist` |
 
 ## 本地验证速查
@@ -72,7 +73,6 @@
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9000/
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9002/
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9003/
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3001/
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:5001/
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9004/
 ```

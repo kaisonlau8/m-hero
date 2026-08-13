@@ -8,4 +8,7 @@ mhero_district_form/
 m-hero-store-timeout-audit/
 store-timeout-cleaner/
 m-hero-hub/
+feishu-bitable-middleware
 feishu-bitable-middleware/
+scrm-api/
+**/.env
