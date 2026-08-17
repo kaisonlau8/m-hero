@@ -19,6 +19,7 @@ $DFMC_DMS_SESSION_HOME/
   .runtime/
     browser-state.json           # CDP port / pid
     keepalive-state.json         # 保活状态 / 下次刷新
+    keepalive.log                # 保活轮次日志（约 2MB 轮转）
     exporting.lock               # 爬虫互斥
     crawl_schedule.json          # 爬取时刻表（本文重点）
     crawl_registry.json          # 爬取登记（进行中 / 今日已完成）
@@ -138,13 +139,31 @@ $DFMC_DMS_SESSION_HOME/
 
 ## 强刷（keepalive）判定顺序
 
-进程：`keepalive_browser.py`（通常由事故车或 VIP 控制台拉起），默认每 **300s** 尝试刷新第一个 DMS 标签页。
+进程：`keepalive_browser.py`（通常由事故车或 VIP 控制台拉起），默认每 **300s** 短连一次 CDP，把 DMS 标签导航到去掉 `?code=` 的干净地址，然后立刻断开。睡眠期间不占 Playwright 连接，避免和定时爬虫抢 CDP。
 
-`refresh_block_reason()` 任一命中则跳过刷新：
+`refresh_block_reason()` 任一命中则跳过刷新（本轮不连 CDP）：
 
 1. `exporting.lock` 被存活进程持有  
 2. `crawl_registry.json` 存在有效 `active`  
 3. 当前时间落在某条未完成时刻表的保护窗口内  
+
+Watchdog（事故车 / VIP，每 30s）：
+
+1. 先按共享 profile 找回 `browser-state`；没有进程则按同一 profile 拉起 Chromium  
+2. 浏览器活着但没有 DMS 标签时，用 CDP 打开干净地址，不杀保活  
+3. 页面在登录 / SSO 时状态为 `need_login`，需人工登录（不填账密）  
+4. 只有浏览器确实不存在且拉起失败，才停保活  
+
+## 启动参数（避免每次输系统密码）
+
+冷启动 Chromium 时统一带：
+
+- `--disable-extensions`：共享 profile 里残留的 1Password / MetaMask 等扩展不再弹密码
+- `--use-mock-keychain` / `--password-store=basic`：不走 macOS「Chrome Safe Storage」钥匙串
+
+已在跑的进程不会自动换参数。下次冷启动生效；换 mock keychain 后已加密的 Cookie 可能读不出来，**可能要重新登一次 DMS**，之后不应再弹系统密码。
+
+冷启动不要再往命令行塞 DMS URL（profile 会恢复上次标签，再加一条 URL 就会变成两页）。启动后只 `ensure_dms_tab`：已有 DMS/SSO/登录页则复用并关掉重复页。
 
 ## 操作注意
 
