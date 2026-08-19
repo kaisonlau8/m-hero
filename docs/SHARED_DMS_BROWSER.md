@@ -139,7 +139,7 @@ $DFMC_DMS_SESSION_HOME/
 
 ## 强刷（keepalive）判定顺序
 
-进程：`keepalive_browser.py`（通常由事故车或 VIP 控制台拉起），默认每 **300s** 短连一次 CDP，把 DMS 标签导航到去掉 `?code=` 的干净地址，然后立刻断开。睡眠期间不占 Playwright 连接，避免和定时爬虫抢 CDP。
+进程：`keepalive_browser.py`（通常由事故车或 VIP 控制台拉起），默认每 **300s** 短连一次 CDP，把 DMS 标签导航到 `#/dashboard`（去掉 `?code=`，不停留在业务页），然后立刻断开。睡眠期间不占 Playwright 连接，避免和定时爬虫抢 CDP。爬虫切页用 `goto_dms_route` 打开干净地址并核对 hash，避免停在上一张表上误点按钮。
 
 `refresh_block_reason()` 任一命中则跳过刷新（本轮不连 CDP）：
 
