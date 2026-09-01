@@ -44,7 +44,7 @@
 | 10:00 | `accident-morning` | 事故车上午 |
 | 17:00 | `accident-evening` | 事故车下午 |
 
-强刷保护：开跑前 **3 分钟**起禁 `page.reload`，直至爬取登记结束；到点未开跑最多再等 **45 分钟**。细节见 `docs/SHARED_DMS_BROWSER.md`。
+强刷保护：开跑前 **3 分钟**起禁 origin 强刷（`https://m-dms.dfmc.com.cn/`），直至爬取登记结束；到点未开跑最多再等 **45 分钟**。细节见 `docs/SHARED_DMS_BROWSER.md`。
 
 改业务定时时，**必须同步**改时刻表。
 
@@ -66,6 +66,7 @@
 | 改黄页收录 | `m-hero-hub/app.py` + 本地 `config/services.local.json` |
 | 查企微 SCRM 接口 | `scrm-api/README.md`、`docs/custom-openapi.md` / `docs/baseline-openapi.md` |
 | 部署 / launchd | `docs/DEPLOYMENT.md`、各仓 `deploy/*.plist` |
+| 向数字化申请 DMS 结构化数据 | [docs/DMS_DATA_ACCESS_REQUEST.md](docs/DMS_DATA_ACCESS_REQUEST.md)、`DMS报表功能使用表.xlsx` |
 
 ## 本地验证速查
 

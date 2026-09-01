@@ -13,6 +13,7 @@
 | [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) | 项目依赖与数据流（详细） |
 | [docs/SHARED_DMS_BROWSER.md](docs/SHARED_DMS_BROWSER.md) | 共享 Chromium、**爬取时刻表**、强刷保护（权威说明） |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 本机端口、launchd / tunnel（不含公网域名） |
+| [docs/DMS_DATA_ACCESS_REQUEST.md](docs/DMS_DATA_ACCESS_REQUEST.md) | 向数字化申请 DMS **只读结构化数据**（替代爬虫） |
 
 ### 各项目文档入口
 

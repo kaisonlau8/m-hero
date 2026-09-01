@@ -23,6 +23,8 @@ $DFMC_DMS_SESSION_HOME/
     exporting.lock               # 爬虫互斥
     crawl_schedule.json          # 爬取时刻表（本文重点）
     crawl_registry.json          # 爬取登记（进行中 / 今日已完成）
+    session_monitor.json         # 登录状态快照 / 今日退出次数
+    session_events.jsonl         # 退出登录与状态变化（收集用）
 ```
 
 实现代码（三仓各有一份副本，应保持同步）：
@@ -36,7 +38,7 @@ $DFMC_DMS_SESSION_HOME/
 
 ## 爬取时刻表（`crawl_schedule.json`）
 
-用途：让 keepalive **强刷**在定时爬取前后自动让路，避免 `page.reload` 打断导出。
+用途：让 keepalive **强刷**在定时爬取前后自动让路，避免强制打开 `https://m-dms.dfmc.com.cn/` 打断导出。
 
 ### 默认条目（北京时间）
 
@@ -81,9 +83,10 @@ $DFMC_DMS_SESSION_HOME/
 生命周期：
 
 1. 爬虫 `acquire_export_lock(...)` → 自动 `register_crawl`（可带 `schedule_id`）
-2. keepalive 见 `active` 或时刻表窗口 → **跳过** `page.reload`
+2. keepalive 见 `active` 或时刻表窗口 → **跳过** origin 强刷
 3. `release_export_lock(...)` → `unregister_crawl`，并把对应 `scheduleId` 记入今日已完成
-4. 若 `active.pid` 已死，keepalive 会清理陈旧登记
+4. 爬虫 Playwright 断开后立刻 `hard_refresh_dms`：在当前标签打开 `https://m-dms.dfmc.com.cn/`（整页跳转，等同地址栏重输；不是 `#/dashboard` 哈希路由）
+5. 若 `active.pid` 已死，keepalive 会清理陈旧登记
 
 手动爬取（不在时刻表窗口内）同样会登记：从拿锁到放锁全程禁刷，只是没有「提前 3 分钟」窗口。
 
@@ -139,7 +142,7 @@ $DFMC_DMS_SESSION_HOME/
 
 ## 强刷（keepalive）判定顺序
 
-进程：`keepalive_browser.py`（通常由事故车或 VIP 控制台拉起），默认每 **300s** 短连一次 CDP，把 DMS 标签导航到 `#/dashboard`（去掉 `?code=`，不停留在业务页），然后立刻断开。睡眠期间不占 Playwright 连接，避免和定时爬虫抢 CDP。爬虫切页用 `goto_dms_route` 打开干净地址并核对 hash，避免停在上一张表上误点按钮。
+进程：`keepalive_browser.py`（通常由事故车或 VIP 控制台拉起），默认每 **300s** 短连一次 CDP，在当前标签强制打开 `https://m-dms.dfmc.com.cn/`（整页跳转 + SSO，等同地址栏重输；不用 `#/dashboard` 哈希路由），然后立刻断开。睡眠期间不占 Playwright 连接，避免和定时爬虫抢 CDP。爬虫切页仍用 `goto_dms_route` 打开业务 hash 并核对路由。每次导出结束后再做一次同样的 origin 强刷。
 
 `refresh_block_reason()` 任一命中则跳过刷新（本轮不连 CDP）：
 
@@ -150,9 +153,10 @@ $DFMC_DMS_SESSION_HOME/
 Watchdog（事故车 / VIP，每 30s）：
 
 1. 先按共享 profile 找回 `browser-state`；没有进程则按同一 profile 拉起 Chromium  
-2. 浏览器活着但没有 DMS 标签时，用 CDP 打开干净地址，不杀保活  
+2. 浏览器活着但没有 DMS 标签时，用 CDP 打开 `https://m-dms.dfmc.com.cn/`，不杀保活  
 3. 页面在登录 / SSO 时状态为 `need_login`，需人工登录（不填账密）  
 4. 只有浏览器确实不存在且拉起失败，才停保活  
+5. 顺带 `observe_dms_session`：只读采样标签 URL / 标题 / 过期文案，写入 `session_monitor.json` 与 `session_events.jsonl`。判定「退出登录」看 SSO/登录页和「登录已过期」等文案，**不**把导航里的「退出登录」按钮算进去。三份控制台仪表盘可看今日次数与最近记录。
 
 ## 启动参数（避免每次输系统密码）
 
