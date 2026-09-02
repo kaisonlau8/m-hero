@@ -10,6 +10,7 @@
 | m-hero-store-timeout-audit | **已下线** | 原依赖 feishu-bitable-middleware | — | — |
 | store-timeout-cleaner | Python / Flask | scrm-api（接口文档 / 可回读其 `.env`） | 企微 SCRM 生产 OpenAPI | — |
 | m-hero-hub | Python / Flask | 无代码依赖，仅链接各控制台 URL | Cloudflare Tunnel | — |
+| NSS_Questionnaire_Reminder | Python / Flask | — | 飞书多维表 / HeroClaw | — |
 | scrm-api | 文档仓（无服务） | — | 企微 SCRM 生产 OpenAPI | — |
 
 ## 共享 DMS 浏览器（运行时耦合）
@@ -87,6 +88,17 @@ DMS × 7 份源表（08:30）
   拉群定时：每天 00:00 / 12:00（launchd `com.store-timeout-cleaner.sync`）
 （不访问 DMS，不依赖共享浏览器）
 ```
+
+### NSS 问卷提醒
+
+```text
+车辆档案 Excel（控制台上传）
+飞书门店清单 + 督导表（00:00 同步）
+  → 交付日期 +90 天 = 提醒日
+  → 09:00 HeroClaw 私聊（督导 + 门店服务经理 + 全国收件人）
+```
+
+不访问 DMS，不依赖共享浏览器。同一 VIN + 提醒日只发一次。
 
 ### 黄页
 

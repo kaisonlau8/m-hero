@@ -1,6 +1,6 @@
 # 猛士服务运营（m-hero）工具集
 
-本目录汇总猛士科技服务运营侧的内部工具：DMS 爬虫、飞书通知、区域报表、超时机器人统计、企微 SCRM OpenAPI 文档，以及统一黄页入口。
+本目录汇总猛士科技服务运营侧的内部工具：DMS 爬虫、飞书通知、区域报表、超时机器人统计、NSS 问卷提醒、企微 SCRM OpenAPI 文档，以及统一黄页入口。
 
 > 各业务仍是**独立 Git 仓库**；本仓库（`m-hero`）提供文档地图、依赖关系与部署总览。代码以子目录方式并列检出。
 
@@ -25,6 +25,7 @@
 | [m-hero-store-timeout-audit](https://github.com/kaisonlau8/m-hero-store-timeout-audit) | [README](m-hero-store-timeout-audit/README.md) | **已下线** |
 | [store-timeout-cleaner](https://github.com/kaisonlau8/store-timeout-cleaner) | [README](store-timeout-cleaner/README.md) | — |
 | [m-hero-hub](https://github.com/kaisonlau8/m-hero-hub) | [README](m-hero-hub/README.md) | — |
+| [NSS_Questionnaire_Reminder](https://github.com/kaisonlau8/NSS_Questionnaire_Reminder) | [README](NSS_Questionnaire_Reminder/README.md) | — |
 | [scrm-api](https://github.com/kaisonlau8/scrm-api) | [README](scrm-api/README.md) | [定开](scrm-api/docs/custom-openapi.md) · [基线](scrm-api/docs/baseline-openapi.md) |
 | feishu-bitable-middleware（软链） | 见原仓库 | 原门店审计依赖的本地中间件包 |
 
@@ -39,6 +40,7 @@
 | 区域报表 | `http://127.0.0.1:9003` | mhero_district_form |
 | 超时机器人统计 | `http://127.0.0.1:5001` | store-timeout-cleaner |
 | 控制台黄页 | `http://127.0.0.1:9004` | m-hero-hub |
+| NSS 问卷提醒 | `http://127.0.0.1:9005` | NSS_Questionnaire_Reminder |
 
 ## 项目依赖关系（简图）
 
@@ -64,19 +66,24 @@ flowchart TB
     MID[feishu-bitable-middleware]
   end
 
+  subgraph nss [NSS]
+    NSS[NSS_Questionnaire_Reminder\n:9005 · 09:00]
+  end
+
   subgraph external [外部系统]
     DMS[猛士 DMS]
     FS[飞书 / 多维表格]
     SCRM[企微 SCRM]
   end
 
-  OA --> ACC & VIP & DIST & CLEAN
+  OA --> ACC & VIP & DIST & CLEAN & NSS
   ACC & VIP & DIST --> SES
   SES --> DMS
   ACC & VIP --> FS
   DIST -->|Webhook 群机器人| FS
   AUDIT --> MID --> FS
   CLEAN --> SCRM
+  NSS --> FS
 ```
 
 要点：
@@ -86,6 +93,7 @@ flowchart TB
 3. **超时机器人统计** 调企微 SCRM OpenAPI 拉客户群，不爬 DMS。
 4. **黄页** 只做入口聚合与本地探活，无业务数据依赖。
 5. **scrm-api** 是企微 SCRM 生产 OpenAPI 文档仓，无本地 HTTP 服务；凭证只放该仓 `.env`。
+6. **NSS 问卷提醒** 用控制台上传车辆档案，同步飞书门店/督导表，交付日 +90 天 09:00 由 HeroClaw 私聊；不爬 DMS。
 
 更细的依赖说明见 [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md)。
 
@@ -101,6 +109,7 @@ flowchart TB
   m-hero-store-timeout-audit/
   store-timeout-cleaner/
   m-hero-hub/
+  NSS_Questionnaire_Reminder/
   scrm-api/
   feishu-bitable-middleware -> ../feishu-bitable-middleware
 
@@ -119,5 +128,6 @@ git clone https://github.com/kaisonlau8/mhero_district_form.git
 git clone https://github.com/kaisonlau8/m-hero-store-timeout-audit.git
 git clone https://github.com/kaisonlau8/store-timeout-cleaner.git
 git clone https://github.com/kaisonlau8/m-hero-hub.git
+git clone https://github.com/kaisonlau8/NSS_Questionnaire_Reminder.git
 git clone https://github.com/kaisonlau8/scrm-api.git
 ```
