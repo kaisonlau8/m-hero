@@ -12,6 +12,7 @@
 | 超时机器人统计 | 127.0.0.1:5001 | store-timeout-cleaner |
 | 控制台黄页 | 127.0.0.1:9004 | m-hero-hub |
 | NSS 问卷提醒 | 127.0.0.1:9005 | m-hero-nss-questionnaire |
+| 助手 APP 安装看板 | 127.0.0.1:9006 | m-hero-assistant-app |
 
 仓库内 `deploy/*.yml.example` 的 `hostname` 使用占位符 `<your-hostname>`。
 
@@ -30,6 +31,7 @@
 | `com.store-timeout-cleaner.sync` | 每天 00:00 / 12:00 从 SCRM 同步客户群 |
 | `com.m-hero-hub.web` | 黄页 |
 | `com.nss-questionnaire-reminder.web` | NSS 问卷提醒（00:00 同步 / 09:00 发送） |
+| `com.m-hero-assistant-app.web` | 助手 APP 安装看板（18:00 有更新才发日报） |
 | `com.cloudflare.cloudflared.*` | 各隧道 |
 
 门店超时审计已于 2026-08-13 下线（原 `:3001` / pm2 `store-audit` / 系统级 `com.cloudflare.cloudflared`）。勿再 `pm2 start`。若系统隧道仍在跑：`sudo cloudflared service uninstall`。

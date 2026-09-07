@@ -12,4 +12,6 @@ feishu-bitable-middleware
 feishu-bitable-middleware/
 scrm-api/
 NSS_Questionnaire_Reminder/
+assistant_APP_Analysis/
+m-hero-assistant-app/
 **/.env

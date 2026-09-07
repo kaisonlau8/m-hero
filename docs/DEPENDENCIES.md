@@ -11,6 +11,7 @@
 | store-timeout-cleaner | Python / Flask | scrm-api（接口文档 / 可回读其 `.env`） | 企微 SCRM 生产 OpenAPI | — |
 | m-hero-hub | Python / Flask | 无代码依赖，仅链接各控制台 URL | Cloudflare Tunnel | — |
 | NSS_Questionnaire_Reminder | Python / Flask | — | 飞书多维表 / HeroClaw | — |
+| m-hero-assistant-app | Node / Express | — | 飞书 HeroClaw 应用消息 | — |
 | scrm-api | 文档仓（无服务） | — | 企微 SCRM 生产 OpenAPI | — |
 
 ## 共享 DMS 浏览器（运行时耦合）
@@ -99,6 +100,18 @@ DMS × 7 份源表（08:30）
 ```
 
 不访问 DMS，不依赖共享浏览器。同一 VIN + 提醒日只发一次。
+
+### 助手 APP 安装看板
+
+```text
+登录清单_全岗位.xlsx（控制台上传）
+  → 解析应装 / 未装 / 安装率（全国 / 区域 / 门店）
+  → 渠道管理：加减门店、退网
+  → SHA-256 与上次发送比对
+  → 有更新才发飞书卡片（含报表下载按钮）并附 Excel
+```
+
+不访问 DMS，不依赖共享浏览器。
 
 ### 黄页
 

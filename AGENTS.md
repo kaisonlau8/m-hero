@@ -28,6 +28,7 @@
 | `store-timeout-cleaner/` | `:5001` | 超时机器人统计（SCRM 00:00 / 12:00） | 不用 |
 | `m-hero-hub/` | `:9004` | 控制台黄页 | 不用 |
 | `NSS_Questionnaire_Reminder/` | `:9005` | NSS 问卷提醒 09:00 | 不用 |
+| `assistant_APP_Analysis/` | `:9006` | 助手 APP 安装看板，18:00 清单有更新才发飞书日报 | 不用 |
 | `scrm-api/` | — | 企微 SCRM OpenAPI 文档（只对接生产） | 不用 |
 | `feishu-bitable-middleware` | 软链 | 原审计依赖的中间件 | 不用 |
 
@@ -66,6 +67,7 @@
 | 改区域报表模板或流水线 | `mhero_district_form/README.md`、`app/processor.py`、`scripts/run_pipeline.py` |
 | 改黄页收录 | `m-hero-hub/app.py` + 本地 `config/services.local.json` |
 | 改 NSS 问卷提醒 | `NSS_Questionnaire_Reminder/README.md`、`app.py` |
+| 改助手 APP 安装看板 | `assistant_APP_Analysis/README.md`、`server/`、`site/` |
 | 查企微 SCRM 接口 | `scrm-api/README.md`、`docs/custom-openapi.md` / `docs/baseline-openapi.md` |
 | 部署 / launchd | `docs/DEPLOYMENT.md`、各仓 `deploy/*.plist` |
 | 向数字化申请 DMS 结构化数据 | [docs/DMS_DATA_ACCESS_REQUEST.md](docs/DMS_DATA_ACCESS_REQUEST.md)、`DMS报表功能使用表.xlsx` |
@@ -79,6 +81,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9003/
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:5001/
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9004/
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9005/
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9006/api/health
 ```
 
 ## 回复风格
