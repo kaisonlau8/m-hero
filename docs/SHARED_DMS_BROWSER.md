@@ -142,7 +142,7 @@ $DFMC_DMS_SESSION_HOME/
 
 ## 强刷（keepalive）判定顺序
 
-进程：`keepalive_browser.py`（通常由事故车或 VIP 控制台拉起），默认每 **300s** 短连一次 CDP，在当前标签强制打开 `https://m-dms.dfmc.com.cn/`（整页跳转 + SSO，等同地址栏重输；不用 `#/dashboard` 哈希路由），然后立刻断开。睡眠期间不占 Playwright 连接，避免和定时爬虫抢 CDP。爬虫切页仍用 `goto_dms_route` 打开业务 hash 并核对路由。每次导出结束后再做一次同样的 origin 强刷。
+进程：`keepalive_browser.py`（通常由事故车或 VIP 控制台拉起），默认每 **300s** 短连一次 CDP，在当前标签强制打开 `https://m-dms.dfmc.com.cn/`（整页跳转 + SSO，等同地址栏重输；不用 `#/dashboard` 哈希路由），然后立刻断开。睡眠期间不占 Playwright 连接，避免和定时爬虫抢 CDP。爬虫切页用 `goto_dms_route`：先 origin 整页跳，再用 `location.hash` 进业务路由，只等 `section.mixButton`；没有工具栏则把 hash 写入地址栏后 `reload` 再等一次。每次导出结束后再做一次同样的 origin 强刷。
 
 `refresh_block_reason()` 任一命中则跳过刷新（本轮不连 CDP）：
 
