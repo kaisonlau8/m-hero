@@ -17,6 +17,8 @@ def _req() -> Request:
 def init_app(app, app_name: str, **overrides) -> Authenticator:
     """Protect a Flask app. overrides: public_paths=[...], public_get_paths=[...], admin_paths=[...], read_role=..."""
     userbar = overrides.pop("userbar", None)
+    bar_account = overrides.pop("userbar_account_url", "")          # e.g. "/account" on the hub (default: cfg.account_url)
+    bar_accounts = overrides.pop("userbar_accounts_url", "")        # admin 「账号管理」 link; "" = not shown
     if userbar is None:
         userbar = os.environ.get("MHERO_AUTH_USERBAR", "") in ("1", "true", "yes")
     auth = Authenticator(AuthConfig.from_env(app_name, **overrides))
@@ -48,7 +50,7 @@ def init_app(app, app_name: str, **overrides) -> Authenticator:
         def _mhero_userbar(resp):
             try:
                 if resp.status_code == 200 and (resp.mimetype or "") == "text/html" and not resp.direct_passthrough:
-                    bar = userbar_html(getattr(g, "mhero_session", None), auth.cfg, auth.effective_mode())
+                    bar = userbar_html(getattr(g, "mhero_session", None), auth.cfg, auth.effective_mode(), bar_accounts, bar_account)
                     if bar:
                         resp.set_data(inject(resp.get_data(as_text=True), bar))
             except Exception:       # never break a page because of the bar

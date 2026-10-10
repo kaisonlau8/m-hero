@@ -255,6 +255,9 @@ def test_userbar_and_account_url(env, oidc):
     s = a.session_from(R(path="/", cookies=sess_cookie(a, login(a, oidc))))
     html = userbar_html(s, a.cfg, "on")
     assert 'href="%s/account"' % a.cfg.issuer in html and "账号设置" in html and "/_auth/logout" in html
+    assert 'class="t"' in html and "accounts-link" not in html            # dropdown trigger; no admin link unless asked
+    h2 = userbar_html(s, a.cfg, "on", "/admin/accounts", "/account")
+    assert 'href="/account"' in h2 and (("accounts-link" in h2) == (s.role == "admin" and s.ga))
     assert userbar_html(s, a.cfg, "off") == "" and userbar_html(None, a.cfg, "on") == ""
     s.via = "service-token"
     assert userbar_html(s, a.cfg, "on") == ""
