@@ -371,7 +371,9 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.4; }
 
 /* ---- 4.6 移动端导航（<=860px 汉堡展开；点击展开由顶栏 JS 控制 .topbar.open） ---- */
 @media (max-width: 860px) {
-  .burger { display: inline-flex; }
+  .burger { display: inline-flex; width: 44px; height: 44px; }
+  /* 顶栏品牌与汉堡按钮的触控热区 >=44px */
+  .brand { min-height: var(--ant-control-height-mobile); }
   .menu, .ant-menu {
     display: none;
     position: absolute;
@@ -1080,10 +1082,13 @@ details.ant-tooltip-hint > summary::-webkit-details-marker { display: none; }
   .ant-form-horizontal { flex-direction: column; align-items: stretch; }
   .ant-form-horizontal .ant-form-item { width: 100%; }
 
-  /* page-header actions 换行并撑满 */
+  /* page-header 纵向堆叠：标题、副标题、操作按钮依次排列，间距 8px；
+     heading 必须归零 flex-basis（桌面 row 方向的 1 1 260px 在 column 方向会把
+     260px 当高度用，标题与按钮之间出现 ~200px 空白） */
   .ant-page-header { flex-direction: column; align-items: stretch; gap: var(--ant-space-2); }
+  .ant-page-header .ant-page-header-heading { flex: 0 0 auto; }
   .ant-page-header-actions { width: 100%; margin-left: 0; }
-  .ant-page-header-actions .ant-btn { flex: 1 1 auto; }
+  .ant-page-header-actions .ant-btn, .ant-page-header-actions .btn { flex: 1 1 auto; }
 
   /* 旧筛选表单同样堆叠 */
   form.filters { flex-direction: column; align-items: stretch; gap: var(--ant-space-2); }
@@ -1106,19 +1111,19 @@ details.ant-tooltip-hint > summary::-webkit-details-marker { display: none; }
     min-height: var(--ant-control-height-mobile);
     cursor: pointer;
   }
-  /* 页脚行内链接（如 JSON API）触控热区 >=44px */
-  .ant-page-footer a { min-height: var(--ant-control-height-mobile); padding: 10px 2px; }
+  /* 页脚/段落/页头 meta 里的行内链接（如 JSON API、「只看修正结果」）触控热区 >=44px */
+  .ant-page-footer a, p.muted a, .ant-page-header-meta a {
+    display: inline-block;
+    min-height: var(--ant-control-height-mobile);
+    padding: 10px 2px;
+  }
 
   /* 表格与分页 */
   .ant-table { font-size: 12.5px; }
   .ant-table th, .ant-table td { padding: var(--ant-space-2); }
 }
 
-/* 极窄屏（360px 档）再收紧容器边距 */
-@media (max-width: 360px) {
-  .container { padding: var(--ant-space-4) var(--ant-space-3) 0; }
-  .ant-page-header-actions .ant-btn { flex: 1 1 100%; }
-}
+/* 极窄屏（360px 档）的容器/按钮规则见 21.15（兼容层之后，避免被 21.13 覆盖） */
 
 /* ==========================================================================
    20. 打印
@@ -1368,6 +1373,8 @@ input[type="text"], input[type="password"], input[type="search"], input[type="da
 /* ---- 21.13 移动端补充（旧 base 的 640px 规则并入 768px 体系） ---- */
 @media (max-width: 640px) {
   .container { padding: var(--ant-space-4) var(--ant-space-4) 0; }
+  /* 顶栏内层与正文容器同左右内边距（16px），左右边缘对齐 */
+  .ant-header > .in, .topbar > .in { padding: 0 var(--ant-space-4); }
   th, td { padding: 5px 8px; }
   table { font-size: 12.5px; }
   .card { padding: var(--ant-space-3); margin-bottom: var(--ant-space-3); }
@@ -1392,4 +1399,12 @@ input[type="text"], input[type="password"], input[type="search"], input[type="da
   form.filters input[type="checkbox"] { min-height: 0; height: 16px; width: 16px; }
   /* 每页/排序等筛选下拉与搜索框在卡片内 100% 宽 */
   form.filters select, form.filters input[type="text"], form.filters input:not([type]) { width: 100%; }
+}
+
+/* ---- 21.15 极窄屏（<=360px）：容器与顶栏内层同步收紧到 12px。
+           必须放在兼容层（21.13 的 640px 规则）之后，否则会被按“后者优先”覆盖 ---- */
+@media (max-width: 360px) {
+  .container { padding: var(--ant-space-4) var(--ant-space-3) 0; }
+  .ant-header > .in, .topbar > .in { padding: 0 var(--ant-space-3); }
+  .ant-page-header-actions .ant-btn, .ant-page-header-actions .btn { flex: 1 1 100%; }
 }
