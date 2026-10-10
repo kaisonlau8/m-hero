@@ -1,0 +1,13 @@
+--- a/NSS_Questionnaire_Reminder/app.py
++++ b/NSS_Questionnaire_Reminder/app.py
+@@ -36,6 +36,10 @@
+ ensure_dirs()
+ 
+ app = Flask(__name__, template_folder=str(ROOT / "templates"))
++
++# --- m-hero SSO (Casdoor): inert unless MHERO_AUTH[_NSS]=audit|on is set (see docs/SSO_CASDOOR.md) ---
++from mhero_auth.flask_adapter import init_app as _mhero_auth_init
++_mhero_auth_init(app, "nss", default_mode="off")
+ app.config["MAX_CONTENT_LENGTH"] = 64 * 1024 * 1024
+ 
+ 
