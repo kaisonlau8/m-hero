@@ -145,6 +145,13 @@ img, svg { max-width: 100%; }
 a { color: var(--ant-primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* 小号（<=13px）链接用深一档主色 #0958d9（白底 / #fafafa / #e6f4ff 均 >=4.5） */
+.ant-page-footer a, .ant-tag a,
+.ant-table td a, td a:not(.ant-btn):not(.btn):not(.ant-chip),
+table.xl tr.tot a, .ant-alert a, .ant-empty-desc a { color: #0958d9; }
+.ant-table td a:hover, td a:not(.ant-btn):not(.btn):not(.ant-chip):hover,
+table.xl tr.tot a:hover, .ant-alert a:hover { color: #0958d9; }
+
 /* 键盘可达性：统一焦点环 */
 a:focus-visible, button:focus-visible, summary:focus-visible,
 input:focus-visible, select:focus-visible {
@@ -533,8 +540,9 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.4; }
 .ant-btn-link { background: transparent; border-color: transparent; color: var(--ant-primary); padding: 4px 0; }
 .ant-btn-link:hover { color: var(--ant-primary-hover); border-color: transparent; }
 
-.ant-btn-danger { color: var(--ant-error); border-color: var(--ant-error); }
-.ant-btn-danger:hover { color: #ff7875; border-color: #ff7875; }
+/* danger 描边按钮文字用深红 #cf1322（白底 ~5.9:1；边框保持 antd 红） */
+.ant-btn-danger { color: #cf1322; border-color: var(--ant-error); }
+.ant-btn-danger:hover { color: #cf1322; border-color: #ff7875; }
 .ant-btn.ant-btn-danger-filled { background: var(--ant-error); border-color: var(--ant-error); color: #fff; }
 .ant-btn.ant-btn-danger-filled:hover { background: #ff7875; border-color: #ff7875; color: #fff; }
 
@@ -705,6 +713,48 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.4; }
 
 /* 表头副标题（如「已保/应保」）：任何表格的 th 内 small 都至少 12px */
 .ant-table th small, th small { display: block; font-weight: 400; font-size: var(--ant-font-size-sm); color: var(--ant-color-text-secondary); }
+
+/* ---- 9.6 表格移动端卡片化（<=768px）：配合 td[data-label="列名"] 使用；
+        桌面端无任何影响。外层滚动容器加 .ant-table-wrap-cards 取消边框 ---- */
+@media (max-width: 768px) {
+  .ant-table-cards thead { display: none; }
+  .ant-table-cards, .ant-table-cards tbody, .ant-table-cards tr, .ant-table-cards td { display: block; width: 100%; }
+  .ant-table-cards { border-spacing: 0; }
+  .ant-table-cards tr {
+    background: var(--ant-color-bg-container);
+    border: 1px solid var(--ant-color-split);
+    border-radius: var(--ant-radius-lg);
+    box-shadow: var(--ant-shadow-card);
+    margin-bottom: var(--ant-space-3);
+    padding: var(--ant-space-1) var(--ant-space-3) var(--ant-space-2);
+  }
+  .ant-table-cards td {
+    border: 0;
+    border-bottom: 1px dashed var(--ant-color-split);
+    padding: var(--ant-space-2) 0;
+    white-space: normal;
+    background: transparent !important;
+    text-align: left !important;
+    overflow-wrap: anywhere;
+  }
+  .ant-table-cards td:last-child { border-bottom: 0; }
+  .ant-table-cards td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--ant-font-size-sm);
+    color: var(--ant-color-text-secondary);
+    margin-bottom: 2px;
+  }
+  .ant-table-wrap-cards { border: 0; border-radius: 0; background: transparent; overflow: visible; }
+  .ant-table-cards .ant-empty { padding: var(--ant-space-4); }
+}
+
+/* ---- 9.7 吸顶筛选容器（列表页滚动时筛选保持在顶栏下方） ---- */
+.ant-sticky-filter {
+  position: sticky;
+  top: var(--ant-header-height);
+  z-index: 20;
+}
 
 /* ==========================================================================
    10. ant-tag / ant-badge
@@ -955,9 +1005,9 @@ details.ant-tooltip-hint > summary::-webkit-details-marker { display: none; }
   text-decoration: none;
   white-space: nowrap;
 }
-.ant-chip:hover { color: var(--ant-primary); border-color: var(--ant-primary); text-decoration: none; }
+.ant-chip:hover { color: #0958d9; border-color: var(--ant-primary); text-decoration: none; }
 .ant-chip .ai { color: var(--ant-color-text-tertiary); }
-.ant-chip:hover .ai { color: var(--ant-primary); }
+.ant-chip:hover .ai { color: #0958d9; }
 .ant-chip .ant-chip-count { color: var(--ant-color-text-secondary); font-size: var(--ant-font-size-sm); font-variant-numeric: tabular-nums; font-weight: 400; }
 /* 快捷入口分组标签 */
 .ant-chip-group-label {
@@ -968,6 +1018,10 @@ details.ant-tooltip-hint > summary::-webkit-details-marker { display: none; }
 }
 .ant-chip-group { display: flex; flex-wrap: wrap; gap: var(--ant-space-2); margin-bottom: var(--ant-space-3); }
 
+/* 裸 checkbox 的扩大热区容器：<label class="ant-check-hit"><input type="checkbox"></label> */
+.ant-check-hit { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 36px; cursor: pointer; }
+.ant-check-hit input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--ant-primary); cursor: pointer; }
+
 /* ---- 18.2 页脚（口径 / 快照来源等次要信息） ---- */
 .ant-page-footer {
   margin: var(--ant-space-2) 0 var(--ant-space-5);
@@ -975,8 +1029,8 @@ details.ant-tooltip-hint > summary::-webkit-details-marker { display: none; }
   color: var(--ant-color-text-secondary);
   line-height: 1.6;
 }
-.ant-page-footer a { color: var(--ant-color-text-secondary); }
-.ant-page-footer a:hover { color: var(--ant-primary); }
+.ant-page-footer a { color: #0958d9; display: inline-block; padding: 4px 2px; }
+.ant-page-footer a:hover { color: var(--ant-primary-active); }
 
 /* ---- 18.3 登录页（独立页面复用同一套 tokens / 组件） ---- */
 .ant-login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: var(--ant-space-4); }
@@ -1040,6 +1094,20 @@ details.ant-tooltip-hint > summary::-webkit-details-marker { display: none; }
   /* 卡片收紧 */
   .ant-card .ant-card-body { padding: var(--ant-space-3); }
   .ant-card-head { padding: 0 var(--ant-space-3); }
+
+  /* 链接胶囊 / 复选框触控热区 >=44px（checkbox 本体 16px，热区由 label 撑开） */
+  .ant-chip { min-height: var(--ant-control-height-mobile); height: auto; }
+  .ant-checkbox { min-height: var(--ant-control-height-mobile); }
+  .ant-check-hit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--ant-control-height-mobile);
+    min-height: var(--ant-control-height-mobile);
+    cursor: pointer;
+  }
+  /* 页脚行内链接（如 JSON API）触控热区 >=44px */
+  .ant-page-footer a { min-height: var(--ant-control-height-mobile); padding: 10px 2px; }
 
   /* 表格与分页 */
   .ant-table { font-size: 12.5px; }
@@ -1317,6 +1385,8 @@ input[type="text"], input[type="password"], input[type="search"], input[type="da
     min-height: var(--ant-control-height-mobile);
     height: auto;
   }
+  .ant-chip { min-height: var(--ant-control-height-mobile); height: auto; }
+  .ant-check-hit { min-width: var(--ant-control-height-mobile); min-height: var(--ant-control-height-mobile); }
   /* 复选框不参与 44px 最小高度（热区由包裹 label 撑开） */
   input[type="checkbox"], input[type="radio"],
   form.filters input[type="checkbox"] { min-height: 0; height: 16px; width: 16px; }
