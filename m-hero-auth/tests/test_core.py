@@ -229,10 +229,11 @@ def test_open_redirect_blocked(env):
 
 def test_logout_clears(env):
     a = mk(env)
-    d = a.authorize(R(path="/_auth/logout"))
+    d = a.authorize(R(path="/_auth/logout", query={"sso": "0"}))
     assert "Max-Age=0" in d.set_cookies[0] and d.location == "/"
-    d = a.authorize(R(path="/_auth/logout", query={"sso": "1"}))
-    assert d.location.startswith(env["MHERO_AUTH_ISSUER"] + "/api/logout")
+    d = a.authorize(R(path="/_auth/logout"))      # default: also end the Casdoor SSO session (else the next visit silently re-logs in)
+    assert d.location.startswith(env["MHERO_AUTH_ISSUER"] + "/api/logout") and "%2F_auth%2Fcallback" in d.location
+    assert a.authorize(R(path="/_auth/callback")).location == "/"
 
 
 def test_cookie_domain_option(env):

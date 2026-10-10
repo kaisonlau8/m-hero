@@ -506,6 +506,8 @@ class Authenticator:
                         set_cookies=[])
 
     def _callback(self, req: Request) -> Decision:
+        if not req.query.get("code") and not req.query.get("error") and not req.query.get("state"):
+            return Decision("redirect", 302, location="/")      # coming back from the Casdoor logout (post_logout_redirect_uri = this URL)
         st = self._unsign(req.cookies.get(self.cfg.cookie_name + "_st", "") or "")
         if req.query.get("error"):
             return self._fail(403, "login failed: " + req.query.get("error", "")[:80])
@@ -553,5 +555,5 @@ class Authenticator:
         clear = [self._clear(self.cfg.cookie_name)]
         # end Casdoor SSO session as well, then come back to this app (which will ask for login again)
         loc = f"{self.cfg.issuer}/api/logout?" + urllib.parse.urlencode(
-            {"post_logout_redirect_uri": self.cfg.base_url + "/", "client_id": self.cfg.client_id})
-        return Decision("redirect", 302, location=loc if req.query.get("sso") == "1" else "/", set_cookies=clear)
+            {"post_logout_redirect_uri": self.cfg.base_url + AUTH_PREFIX + "/callback", "client_id": self.cfg.client_id})
+        return Decision("redirect", 302, location="/" if req.query.get("sso") == "0" else loc, set_cookies=clear)

@@ -21,7 +21,7 @@ from .core import APP_IDS, APP_LABEL, APP_ROLE_PREFIX
 
 LEVELS = {"admin": "管理员", "supervisor": "督导"}
 RESERVED = {"admin", "root", "built-in", "svc-accounts", "system", "anonymous"}   # never creatable / editable here
-NAME_RE = re.compile(r"^[a-z][a-z0-9._-]{2,31}$")
+NAME_RE = re.compile(r"^(?:[a-z][a-z0-9._-]{2,31}|1[3-9]\d{9})$")   # lowercase-letter-led name, or an 11-digit mobile number
 MIN_PASSWORD = 10
 
 
@@ -127,7 +127,7 @@ class AccountService:
     def create(self, actor: str, name: str, display: str, password: str, level: str, apps: list[str]) -> None:
         name = (name or "").strip().lower()
         if not NAME_RE.match(name) or name in RESERVED:
-            self._deny(actor, "create", name, "用户名需 3~32 位，小写字母开头，只含小写字母/数字/._-，且不能是保留名")
+            self._deny(actor, "create", name, "用户名需为 11 位手机号，或 3~32 位小写字母开头（只含小写字母/数字/._-），且不能是保留名")
         if level not in LEVELS:
             self._deny(actor, "create", name, "身份必须是管理员或督导")
         apps = self._apps(apps)
