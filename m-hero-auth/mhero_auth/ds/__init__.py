@@ -30,6 +30,11 @@ def sprite() -> str:
     return _read("sprite.svg")
 
 
+def cards() -> str:
+    """移动端表格卡片化 JS（</body> 前内联：<script>{{ cards()|safe }}</script>）。"""
+    return _read("cards.js")
+
+
 @lru_cache(maxsize=16)
 def sprite_only(names: tuple[str, ...], prefix: str = "i-ub-") -> str:
     """只含指定 symbol 的精简 sprite（id 加 prefix 前缀，避免与宿主页全量 sprite 撞 id）。

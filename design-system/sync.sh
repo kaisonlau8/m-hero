@@ -20,6 +20,7 @@ TARGETS=(
 for t in "${TARGETS[@]}"; do
   mkdir -p "$t"
   install -m 644 "$SRC/antd-lite.css" "$t/antd-lite.css"
+  install -m 644 "$SRC/cards.js" "$t/cards.js"
   install -m 644 "$SRC/sprite.svg" "$t/sprite.svg"
   echo "synced -> $t"
 done
