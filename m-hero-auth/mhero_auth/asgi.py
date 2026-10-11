@@ -40,6 +40,9 @@ class AuthMiddleware:
         elif d.json_body is not None and (d.kind == "allow" or self.auth.wants_json(req)):
             body = json.dumps(d.json_body).encode()
             out.append((b"content-type", b"application/json"))
+        elif d.html:
+            body = d.html.encode()
+            out.append((b"content-type", b"text/html; charset=utf-8"))
         else:
             body = (d.body or "unauthorized").encode()
             out.append((b"content-type", b"text/plain; charset=utf-8"))

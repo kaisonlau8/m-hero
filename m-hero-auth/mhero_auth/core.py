@@ -64,6 +64,7 @@ class AuthConfig:
     session_hours: float = 720.0           # 30 days
     revalidate_hours: float = 12.0        # re-check with Casdoor (silent SSO) this often on page loads: role changes/disables take effect
     cookie_name: str = ""                 # default mh_<app>
+    hub_url: str = ""                     # 黄页地址（403 友好页「返回黄页」按钮）；空 = 默认黄页
     cookie_domain: str = ""               # empty = host-only (recommended)
     cookie_secure: bool | None = None     # default: base_url startswith https
     org: str = ""                         # required Casdoor organization ("" = any)
@@ -114,6 +115,7 @@ class AuthConfig:
             session_secret=g("SESSION_SECRET"),
             session_hours=float(g("SESSION_HOURS", "720") or 720),
             revalidate_hours=float(g("REVALIDATE_HOURS", "12") or 12),
+            hub_url=g("HUB_URL"),
             cookie_domain=g("COOKIE_DOMAIN"),
             org=g("ORG"),
             role_prefix=g("ROLE_PREFIX", "mhero-"),
@@ -197,6 +199,7 @@ class Decision:
     session: Session | None = None
     headers: dict[str, str] = field(default_factory=dict)
     audit_would_block: bool = False
+    html: str = ""             # optional HTML body for browser (non-JSON) denials; status/body unchanged
 
 
 # --------------------------------------------------------------------------- authenticator
@@ -379,9 +382,17 @@ class Authenticator:
             return self._no_app(s)
         return self._check_role(req, s)
 
-    def _no_app(self, s: Session | None = None) -> Decision:
-        return Decision("deny", 403, session=s, body="403 你的账号没有开通本系统（%s）的访问权限，请联系管理员。" % APP_LABEL.get(self.cfg.app_id, self.cfg.app_id),
-                        json_body={"error": "no access to this system", "system": self.cfg.app_id})
+    def _no_app(self, s: Session | None = None, name: str = "") -> Decision:
+        from .forbidden import DEFAULT_HUB_URL, render_no_access
+        label = APP_LABEL.get(self.cfg.app_id, self.cfg.app_id)
+        hub = self.cfg.hub_url or DEFAULT_HUB_URL
+        try:
+            page = render_no_access((s.display or s.name) if s else name, label, hub, AUTH_PREFIX + "/logout")
+        except Exception:       # never let the friendly page break the 403 itself
+            log.exception("render_no_access failed")
+            page = ""
+        return Decision("deny", 403, session=s, body="403 你的账号没有开通本系统（%s）的访问权限，请联系管理员。" % label, html=page,
+                        json_body={"error": "no access to this system", "system": self.cfg.app_id, "hub_url": hub})
 
     def _check_role(self, req: Request, s: Session) -> Decision:
         need = self.required_role(req)
@@ -528,9 +539,11 @@ class Authenticator:
         role = self.role_from_claims(claims)
         if not role:
             log.warning("mhero_auth[%s] user %s has no role for this app", self.cfg.app_name, claims.get("name"))
-            return Decision("deny", 403, body="403 你的账号没有访问本系统的权限，请联系管理员。",
-                            json_body={"error": "no role for this app"},
-                            set_cookies=[self._clear(self.cfg.cookie_name + "_st")])
+            d = self._no_app(name=claims.get("displayName") or claims.get("name") or "")
+            d.body = "403 你的账号没有访问本系统的权限，请联系管理员。"
+            d.json_body = {**(d.json_body or {}), "error": "no role for this app"}
+            d.set_cookies = [self._clear(self.cfg.cookie_name + "_st")]
+            return d
         apps, ga = self.apps_from_claims(claims)
         nxt_path = urllib.parse.urlsplit(self._safe_next(st.get("next", "/"))).path
         if self.cfg.require_app and not (ga or self.cfg.app_id in apps or (self.cfg.app_id == "hub" and apps)
@@ -538,7 +551,7 @@ class Authenticator:
             log.warning("mhero_auth[%s] %suser %s has no mhero-app-%s role", self.cfg.app_name,
                         "AUDIT would deny: " if self.effective_mode() == "audit" else "", claims.get("name"), self.cfg.app_id)
             if self.effective_mode() != "audit":
-                d = self._no_app()
+                d = self._no_app(name=claims.get("displayName") or claims.get("name") or "")
                 d.set_cookies = [self._clear(self.cfg.cookie_name + "_st")]
                 return d
         life = min(self.cfg.session_hours * 3600, max(60, claims["exp"] - self.cfg.clock()))

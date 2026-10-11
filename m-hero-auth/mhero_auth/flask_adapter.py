@@ -35,6 +35,9 @@ def init_app(app, app_name: str, **overrides) -> Authenticator:
         elif d.json_body is not None and (d.kind == "allow" or auth.wants_json(_req())):
             resp = jsonify(d.json_body)
             resp.status_code = d.status
+        elif d.html:
+            resp = Response(d.html, status=d.status, mimetype="text/html")
+            resp.headers["Cache-Control"] = "no-store"
         else:
             resp = Response(d.body or "unauthorized", status=d.status, mimetype="text/plain; charset=utf-8")
         for c in d.set_cookies:
