@@ -781,11 +781,11 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.4; }
   .ant-table-cards td[data-label]:not([data-card-title]):not([data-cards-full]):not([colspan]) {
     display: grid !important;
     grid-template-columns: minmax(4.5em, 38%) 1fr;
-    column-gap: var(--ant-space-3); row-gap: 1px; align-items: baseline;
+    column-gap: var(--ant-space-3); row-gap: 0; align-items: baseline;
   }
   .ant-table-cards td[data-label]:not([data-card-title]):not([colspan])::before {
     content: attr(data-label);
-    grid-column: 1; grid-row: 1 / span 999;
+    grid-column: 1; grid-row: 1;
     font-size: var(--ant-font-size-sm); color: var(--ant-color-text-secondary);
     align-self: start; line-height: 1.65; min-width: 0;
   }
@@ -1511,3 +1511,10 @@ td.row-action { text-align: right; white-space: nowrap; }
 .row-msg { margin-top: var(--ant-space-1); font-size: var(--ant-font-size-sm, 12px); line-height: 1.5; }
 .row-msg-ok { color: var(--ant-success-text, #389e0d); }
 .row-msg-err { color: var(--ant-error-text, #cf1322); }
+
+/* 桌面：理由 + 操作两列固定在最右，宽表横向滚动时输入框和「提交申请」始终可见 */
+@media (min-width: 769px) {
+  table.sticky1 td.row-action, table.sticky1 th.row-action-h { position: sticky; right: 0; width: 112px; min-width: 112px; z-index: 3; background: var(--ant-color-bg-container, #fff); box-shadow: -1px 0 0 var(--ant-color-split, #f0f0f0); }
+  table.sticky1 td.row-reason, table.sticky1 th.row-reason-h { position: sticky; right: 112px; z-index: 3; background: var(--ant-color-bg-container, #fff); box-shadow: -1px 0 0 var(--ant-color-split, #f0f0f0); }
+  table.sticky1 th.row-action-h, table.sticky1 th.row-reason-h { z-index: 6; }
+}
