@@ -17,10 +17,15 @@ TARGETS=(
   "$ROOT/store-timeout-cleaner/ds"
 )
 
+BRAND_FILES="logo-white.png logo-white@2x.png logo-blue.png logo-blue@2x.png favicon.ico icon-16.png icon-32.png icon-48.png icon-180.png icon-192.png icon-512.png"
+
 for t in "${TARGETS[@]}"; do
-  mkdir -p "$t"
+  mkdir -p "$t/brand"
   install -m 644 "$SRC/antd-lite.css" "$t/antd-lite.css"
   install -m 644 "$SRC/cards.js" "$t/cards.js"
   install -m 644 "$SRC/sprite.svg" "$t/sprite.svg"
+  for f in $BRAND_FILES; do
+    install -m 644 "$SRC/brand/$f" "$t/brand/$f"
+  done
   echo "synced -> $t"
 done

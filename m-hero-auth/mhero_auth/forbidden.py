@@ -2,9 +2,11 @@
 
 render_no_access(name, system_label, hub_url, logout_url, ds_dir=None) -> str
 reportdb 带有同一份拷贝（读取自己的 assets/ds）；改这里请同步 mhero_district_form/reportdb/forbidden_page.py。
+品牌：Ant Design 蓝。logo / favicon 从 ds/brand/ 读取并内联为 data URI（页面自包含，不依赖静态路由）。
 """
 from __future__ import annotations
 
+import base64
 import re
 from functools import lru_cache
 from html import escape
@@ -26,6 +28,17 @@ def _sprite(ds_dir: str) -> str:
             + "".join(parts) + "</svg>")
 
 
+@lru_cache(maxsize=8)
+def _brand_datauri(ds_dir: str, name: str) -> str:
+    """ds/brand/<name> 内联为 data URI（文件缺失返回 ''，页面退化为纯文字）。"""
+    mime = "image/png" if name.endswith(".png") else "image/x-icon"
+    try:
+        raw = (Path(ds_dir) / "brand" / name).read_bytes()
+    except OSError:
+        return ""
+    return f"data:{mime};base64," + base64.b64encode(raw).decode("ascii")
+
+
 _CSS = """
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -34,6 +47,7 @@ display:flex;align-items:center;justify-content:center;padding:24px 16px}
 .ai{width:1em;height:1em;fill:currentColor;vertical-align:-.125em;display:inline-block;flex:none}
 .card{width:100%;max-width:520px;background:#fff;border-radius:8px;padding:40px 32px 32px;text-align:center;
 box-shadow:0 1px 2px 0 rgba(0,0,0,.03),0 1px 6px -1px rgba(0,0,0,.02),0 2px 4px 0 rgba(0,0,0,.02)}
+.logo{height:28px;width:auto;display:block;margin:0 auto 20px}
 .ico{width:72px;height:72px;border-radius:50%;background:#fffbe6;color:#faad14;display:inline-flex;align-items:center;justify-content:center;font-size:36px}
 h1{font-size:24px;line-height:1.35;font-weight:600;margin:20px 0 8px}
 .sub{color:rgba(0,0,0,.65);margin:0 0 4px;word-break:break-word}
@@ -55,12 +69,18 @@ def render_no_access(name: str, system_label: str, hub_url: str, logout_url: str
     ds_dir = str(ds_dir or (Path(__file__).resolve().parent / "ds"))
     n = escape(name or "", quote=True)
     who = (f'<div class="who"><svg class="ai" aria-hidden="true"><use href="#i-user"/></svg><span>当前账号：{n}</span></div>' if n else "")
+    logo = _brand_datauri(ds_dir, "logo-blue.png")
+    logo_html = f'<img class="logo" src="{logo}" alt="猛士" height="28">' if logo else ""
+    fav = _brand_datauri(ds_dir, "icon-32.png")
+    fav_html = f'<link rel="icon" type="image/png" sizes="32x32" href="{fav}">' if fav else ""
     return (
         '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         '<title>没有访问权限</title><meta name="robots" content="noindex">'
+        f'{fav_html}<meta name="theme-color" content="#1677ff">'
         f'<style>{_CSS}</style></head><body>{_sprite(ds_dir)}'
         '<main class="card" role="main" data-mhero-403="1">'
+        f'{logo_html}'
         '<div class="ico"><svg class="ai" aria-hidden="true"><use href="#i-lock"/></svg></div>'
         '<h1>你的账号没有开通本系统的访问权限</h1>'
         f'{who}'
