@@ -257,6 +257,8 @@ def test_userbar_and_account_url(env, oidc):
     html = userbar_html(s, a.cfg, "on")
     assert 'href="%s/account"' % a.cfg.issuer in html and "账号设置" in html and "/_auth/logout" in html
     assert 'class="t"' in html and "accounts-link" not in html            # dropdown trigger; no admin link unless asked
+    assert 'aria-label="打开菜单"' in html and 'id="mhero-userbar-drawer"' in html
+    assert "max-width:860px" in html and "translateX(100%)" in html and "关闭菜单" in html
     h2 = userbar_html(s, a.cfg, "on", "/admin/accounts", "/account")
     assert 'href="/account"' in h2 and (("accounts-link" in h2) == (s.role == "admin" and s.ga))
     assert userbar_html(s, a.cfg, "off") == "" and userbar_html(None, a.cfg, "on") == ""
