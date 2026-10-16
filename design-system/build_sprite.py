@@ -5,7 +5,7 @@
 import re, sys, pathlib
 SRC = pathlib.Path(sys.argv[1]) / "inline-svg"
 ICONS = {  # 图标名 -> 主题
- "download":"outlined","export":"outlined","info-circle":"outlined","search":"outlined","reload":"outlined","printer":"outlined",
+ "download":"outlined","export":"outlined","info-circle":"outlined","search":"outlined","reload":"outlined","loading":"outlined","printer":"outlined",
  "down":"outlined","up":"outlined","left":"outlined","right":"outlined","plus":"outlined","check":"outlined","close":"outlined","user":"outlined",
  "logout":"outlined","setting":"outlined","team":"outlined","lock":"outlined","file-excel":"outlined","filter":"outlined","menu":"outlined",
  "warning":"outlined","exclamation-circle":"outlined","check-circle":"outlined","close-circle":"outlined","delete":"outlined","edit":"outlined",
