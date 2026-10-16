@@ -1,0 +1,25 @@
+--- a/m-hero-hub/app.py
++++ b/m-hero-hub/app.py
+@@ -15,6 +15,10 @@
+ ROOT = Path(__file__).resolve().parent
+ app = Flask(__name__, template_folder=str(ROOT / "templates"))
+ 
++# --- m-hero SSO (Casdoor): inert unless MHERO_AUTH[_HUB]=audit|on is set (see docs/SSO_CASDOOR.md) ---
++from mhero_auth.flask_adapter import init_app as _mhero_auth_init
++_mhero_auth_init(app, "hub", default_mode="off", public_get_paths=["/healthz"])
++
+ # 默认只写本地入口；公网 URL 放在未入库的 config/services.local.json
+ _SERVICE_DEFS = [
+     {
+@@ -114,6 +118,11 @@
+     return render_template("index.html", services=probe_services())
+ 
+ 
++@app.get("/healthz")
++def healthz():
++    return "ok"
++
++
+ @app.get("/api/status")
+ def api_status():
+     return jsonify({"services": probe_services()})

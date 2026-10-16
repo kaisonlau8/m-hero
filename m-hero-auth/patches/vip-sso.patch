@@ -1,0 +1,13 @@
+--- a/m-hero-vip-custom-alert/scripts/web_console.py
++++ b/m-hero-vip-custom-alert/scripts/web_console.py
+@@ -79,6 +79,10 @@
+     template_folder=str(PLUGIN_ROOT / "templates"),
+ )
+ 
++# --- m-hero SSO (Casdoor): inert unless MHERO_AUTH[_VIP]=audit|on is set (see docs/SSO_CASDOOR.md) ---
++from mhero_auth.flask_adapter import init_app as _mhero_auth_init
++_mhero_auth_init(app, "vip", default_mode="off", public_paths=["/feishu/card"])
++
+ # Session paths honor DFMC_DMS_SESSION_HOME for cross-crawler sharing
+ RUNTIME_DIR = get_runtime_dir(PLUGIN_ROOT)
+ BROWSER_PROFILE_DIR = get_browser_profile_dir(PLUGIN_ROOT)

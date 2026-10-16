@@ -1,0 +1,10 @@
+[project]
+name = "mhero-auth"
+version = "0.1.0"
+description = "Casdoor OIDC login middleware shared by all m-hero web consoles (Flask + FastAPI/ASGI)"
+requires-python = ">=3.10"
+dependencies = ["cryptography>=41"]   # only for RS256 verification of Casdoor ID tokens
+[project.optional-dependencies]
+test = ["pytest", "flask", "fastapi", "httpx", "requests"]
+[tool.setuptools]
+packages = ["mhero_auth"]

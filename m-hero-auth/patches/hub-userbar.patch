@@ -1,0 +1,11 @@
+--- a/m-hero-hub/app.py
++++ b/m-hero-hub/app.py
+@@ -17,7 +17,7 @@
+ 
+ # --- m-hero SSO (Casdoor): inert unless MHERO_AUTH[_HUB]=audit|on is set (see docs/SSO_CASDOOR.md) ---
+ from mhero_auth.flask_adapter import init_app as _mhero_auth_init
+-_mhero_auth_init(app, "hub", default_mode="off", public_get_paths=["/healthz"])
++_mhero_auth_init(app, "hub", default_mode="off", public_get_paths=["/healthz"], userbar=True)   # top-right user bar: 账号设置 + 退出登录
+ 
+ # 默认只写本地入口；公网 URL 放在未入库的 config/services.local.json
+ _SERVICE_DEFS = [

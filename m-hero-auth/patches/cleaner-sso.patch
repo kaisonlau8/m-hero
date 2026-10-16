@@ -1,0 +1,13 @@
+--- a/store-timeout-cleaner/app.py
++++ b/store-timeout-cleaner/app.py
+@@ -21,6 +21,10 @@
+ 
+ ROOT = os.path.dirname(os.path.abspath(__file__))
+ app = Flask(__name__)
++
++# --- m-hero SSO (Casdoor): inert unless MHERO_AUTH[_CLEANER]=audit|on is set (see docs/SSO_CASDOOR.md) ---
++from mhero_auth.flask_adapter import init_app as _mhero_auth_init
++_mhero_auth_init(app, "cleaner", default_mode="off")
+ app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
+ DATA_FILE = os.path.join(ROOT, "data.json")
+ LOCK_FILE = os.path.join(ROOT, ".sync.lock")

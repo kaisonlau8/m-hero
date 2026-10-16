@@ -26,7 +26,7 @@
 | [store-timeout-cleaner](https://github.com/kaisonlau8/store-timeout-cleaner) | [README](store-timeout-cleaner/README.md) | — |
 | [m-hero-hub](https://github.com/kaisonlau8/m-hero-hub) | [README](m-hero-hub/README.md) | — |
 | [NSS_Questionnaire_Reminder](https://github.com/kaisonlau8/NSS_Questionnaire_Reminder) | [README](NSS_Questionnaire_Reminder/README.md) | — |
-| [m-hero-assistant-app](https://github.com/kaisonlau8/m-hero-assistant-app) | [README](assistant_APP_Analysis/README.md) | 助手 APP 安装看板 / 飞书日报 |
+| [m-hero-assistant-app](https://github.com/kaisonlau8/m-hero-assistant-app) | [README](assistant_APP_Analysis/README.md) | **已下线** |
 | [scrm-api](https://github.com/kaisonlau8/scrm-api) | [README](scrm-api/README.md) | [定开](scrm-api/docs/custom-openapi.md) · [基线](scrm-api/docs/baseline-openapi.md) |
 | feishu-bitable-middleware（软链） | 见原仓库 | 原门店审计依赖的本地中间件包 |
 
@@ -42,7 +42,6 @@
 | 超时机器人统计 | `http://127.0.0.1:5001` | store-timeout-cleaner |
 | 控制台黄页 | `http://127.0.0.1:9004` | m-hero-hub |
 | NSS 问卷提醒 | `http://127.0.0.1:9005` | NSS_Questionnaire_Reminder |
-| 助手 APP 安装看板 | `http://127.0.0.1:9006` | m-hero-assistant-app |
 
 ## 项目依赖关系（简图）
 
@@ -73,7 +72,7 @@ flowchart TB
   end
 
   subgraph appinstall [助手 APP]
-    APP[assistant_APP_Analysis\n:9006 · 18:00 有更新才发]
+    APP[assistant_APP_Analysis\n已下线]
   end
 
   subgraph external [外部系统]
@@ -82,7 +81,7 @@ flowchart TB
     SCRM[企微 SCRM]
   end
 
-  OA --> ACC & VIP & DIST & CLEAN & NSS & APP
+  OA --> ACC & VIP & DIST & CLEAN & NSS
   ACC & VIP & DIST --> SES
   SES --> DMS
   ACC & VIP --> FS
@@ -90,7 +89,6 @@ flowchart TB
   AUDIT --> MID --> FS
   CLEAN --> SCRM
   NSS --> FS
-  APP --> FS
 ```
 
 要点：
@@ -100,8 +98,8 @@ flowchart TB
 3. **超时机器人统计** 调企微 SCRM OpenAPI 拉客户群，不爬 DMS。
 4. **黄页** 只做入口聚合与本地探活，无业务数据依赖。
 5. **scrm-api** 是企微 SCRM 生产 OpenAPI 文档仓，无本地 HTTP 服务；凭证只放该仓 `.env`。
-6. **NSS 问卷提醒** 用控制台上传车辆档案，同步飞书门店/督导表，交付日 +90 天 09:00 由 HeroClaw 私聊；不爬 DMS。
-7. **助手 APP 安装看板** 解析登录清单，统计全国/区域/门店安装率；渠道可退网；清单有更新才发飞书日报并附 Excel。不爬 DMS。
+6. **NSS 问卷提醒** 用控制台上传车辆档案，同步「参与考核特约店清单」，交付日 +90 天 09:00 由 HeroClaw 私聊督导、售后负责人和本系统全国收件人；不爬 DMS。
+7. **助手 APP 安装看板** 已于 2026-09-30 下线（原 `:9006` / `com.m-hero-assistant-app.web`）；代码仓保留，不再跑服务、不再发日报。
 
 更细的依赖说明见 [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md)。
 

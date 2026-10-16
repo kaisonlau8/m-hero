@@ -1,0 +1,17 @@
+appname = casdoor
+httpport = 8000
+runmode = prod
+copyrequestbody = true
+driverName = sqlite
+dataSourceName = file:/home/ubuntu/casdoor/data/casdoor.db?cache=shared
+dbName = casdoor
+tableNamePrefix =
+showSql = false
+origin = https://sso-m-hero.41box.com
+socks5Proxy = ""
+staticBaseUrl = "https://cdn.casbin.org"
+defaultApplication = "mhero-sso"
+enableGzip = true
+logConfig = {"adapter":"file", "filename": "/home/ubuntu/casdoor/logs/casdoor.log", "maxdays":30, "perm":"0640"}
+initDataNewOnly = true
+initDataFile = "/home/ubuntu/casdoor/init_data.json"

@@ -1,0 +1,99 @@
+{
+ "organizations": [
+  {
+   "owner": "admin",
+   "name": "mhero",
+   "displayName": "M-Hero",
+   "websiteUrl": "https://sso-m-hero.41box.com",
+   "passwordType": "bcrypt",
+   "defaultApplication": "mhero-sso",
+   "passwordOptions": [
+    "AtLeast8",
+    "Aa123"
+   ],
+   "countryCodes": [
+    "CN"
+   ],
+   "tags": [],
+   "languages": [
+    "zh",
+    "en"
+   ],
+   "enableSoftDeletion": false
+  }
+ ],
+ "applications": [
+  {
+   "owner": "admin",
+   "name": "mhero-sso",
+   "displayName": "M-Hero SSO",
+   "organization": "mhero",
+   "enablePassword": true,
+   "enableSignUp": false,
+   "enableCodeSignin": false,
+   "clientId": "<CLIENT_ID>",
+   "clientSecret": "<CLIENT_SECRET>",
+   "redirectUris": [
+    "https://oa-m-hero.41box.com/_auth/callback",
+    "https://m-hero-report.41box.com/_auth/callback",
+    "https://store-timeout-cleaner.41box.com/_auth/callback",
+    "https://m-hero-district-form.41box.com/_auth/callback",
+    "https://m-hero-vip-alert.41box.com/_auth/callback",
+    "https://m-hero-nss-questionnaire.41box.com/_auth/callback",
+    "https://m-hero-report.41box.com/auth/oidc/callback"
+   ],
+   "grantTypes": [
+    "authorization_code",
+    "refresh_token"
+   ],
+   "tokenFormat": "JWT",
+   "expireInHours": 720,
+   "refreshExpireInHours": 720,
+   "providers": [],
+   "signupItems": [],
+   "signinMethods": [
+    {
+     "name": "Password",
+     "displayName": "Password",
+     "rule": "All"
+    }
+   ],
+   "cert": "cert-built-in",
+   "enableSigninSession": true,
+   "enableAutoSignin": true,
+   "cookieExpireInHours": 720
+  }
+ ],
+ "users": [],
+ "roles": [
+  {
+   "owner": "mhero",
+   "name": "mhero-admin",
+   "displayName": "管理员",
+   "users": [],
+   "roles": [],
+   "domains": [],
+   "isEnabled": true
+  },
+  {
+   "owner": "mhero",
+   "name": "mhero-supervisor",
+   "displayName": "督导",
+   "users": [],
+   "roles": [],
+   "domains": [],
+   "isEnabled": true
+  }
+ ],
+ "permissions": [],
+ "models": [],
+ "adapters": [],
+ "providers": [],
+ "groups": [],
+ "ldaps": [],
+ "syncers": [],
+ "webhooks": [],
+ "tokens": [],
+ "resources": [],
+ "certs": []
+}

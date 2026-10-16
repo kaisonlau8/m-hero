@@ -1,0 +1,13 @@
+--- a/mhero_district_form/scripts/web_console.py
++++ b/mhero_district_form/scripts/web_console.py
+@@ -42,6 +42,10 @@
+     __name__,
+     template_folder=str(PLUGIN_ROOT / "templates"),
+ )
++
++# --- m-hero SSO (Casdoor): inert unless MHERO_AUTH[_DISTRICT]=audit|on is set (see docs/SSO_CASDOOR.md) ---
++from mhero_auth.flask_adapter import init_app as _mhero_auth_init
++_mhero_auth_init(app, "district", default_mode="off")   # everything (incl. /api/report/latest) requires login; no public paths
+ DEFAULT_TEMPLATE_PATH = PLUGIN_ROOT / "app" / "assets" / "report_template.xlsx"
+ TEMPLATE_BACKUP_DIR = PLUGIN_ROOT / "app" / "assets" / "template_backups"
+ 

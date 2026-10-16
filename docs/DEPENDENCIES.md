@@ -11,7 +11,7 @@
 | store-timeout-cleaner | Python / Flask | scrm-api（接口文档 / 可回读其 `.env`） | 企微 SCRM 生产 OpenAPI | — |
 | m-hero-hub | Python / Flask | 无代码依赖，仅链接各控制台 URL | Cloudflare Tunnel | — |
 | NSS_Questionnaire_Reminder | Python / Flask | — | 飞书多维表 / HeroClaw | — |
-| m-hero-assistant-app | Node / Express | — | 飞书 HeroClaw 应用消息 | — |
+| m-hero-assistant-app | **已下线** | — | 原飞书 HeroClaw 应用消息 | — |
 | scrm-api | 文档仓（无服务） | — | 企微 SCRM 生产 OpenAPI | — |
 
 ## 共享 DMS 浏览器（运行时耦合）
@@ -51,14 +51,19 @@ DMS 维修工单页
   → crawl_maintenance_orders.py
   → output/*.xlsx → import → rule_engine
   → 飞书卡片 / Excel 报表
+联系人：参与考核特约店清单（00:00）
+  → 门店消息只发给售后负责人
+  → 区域报表：该区督导 + 本系统全国收件人
+  → 全国报表：全部督导 + 本系统全国收件人
 ```
 
 ### VIP 保养提醒
 
 ```text
-飞书多维表（00:00 同步 VIP + 提醒人）
+飞书多维表（00:00 同步 VIP + 提醒人 + 参与考核特约店清单）
 DMS 保养提醒任务（09:00 导出）
   → VIN 匹配 → 飞书卡片（任务编码去重）
+  → 已发出的卡片再抄送本系统全国收件人（无按钮，不写跟踪表）
 ```
 
 ### 区域报表
@@ -69,6 +74,7 @@ DMS × 7 份源表（08:30）
   → app.processor.build_report
   → output/区域各指标情况一览*.xlsx
   → 飞书群 Webhook（下载链接）
+  → 本系统全国收件人私聊（同一张卡片，有 Excel 时附文件）
 ```
 
 ### 门店超时审计（已下线）
@@ -94,24 +100,16 @@ DMS × 7 份源表（08:30）
 
 ```text
 车辆档案 Excel（控制台上传）
-飞书门店清单 + 督导表（00:00 同步）
+飞书「参与考核特约店清单」（00:00 同步）
   → 交付日期 +90 天 = 提醒日
-  → 09:00 HeroClaw 私聊（督导 + 门店服务经理 + 全国收件人）
+  → 09:00 HeroClaw 私聊（督导 + 售后负责人 + 本系统全国收件人）
 ```
 
 不访问 DMS，不依赖共享浏览器。同一 VIN + 提醒日只发一次。
 
-### 助手 APP 安装看板
+### 助手 APP 安装看板（已下线）
 
-```text
-登录清单_全岗位.xlsx（控制台上传）
-  → 解析应装 / 未装 / 安装率（全国 / 区域 / 门店）
-  → 渠道管理：加减门店、退网
-  → SHA-256 与上次发送比对
-  → 有更新才发飞书卡片（含报表下载按钮）并附 Excel
-```
-
-不访问 DMS，不依赖共享浏览器。
+2026-09-30 起不再运行。原数据流：登录清单解析安装率 → 有更新才发飞书日报；18:00 由 `com.m-hero-assistant-app.web` 触发。黄页已摘除，勿再启动 `:9006`。
 
 ### 黄页
 

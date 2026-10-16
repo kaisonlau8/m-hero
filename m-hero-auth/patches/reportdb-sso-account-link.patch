@@ -1,0 +1,32 @@
+--- a/mhero_district_form/reportdb/webapp.py
++++ b/mhero_district_form/reportdb/webapp.py
+@@ -159,6 +159,10 @@
+         ctx["can_request_nav"] = bool(user and user.can_request)
+         return ctx
+ 
++    def _sso_account_url() -> str:
++        return (os.getenv("REPORTDB_SSO_ACCOUNT_URL") or os.getenv("SSO_ACCOUNT_URL")
++                or (os.getenv("REPORTDB_OIDC_ISSUER", "").rstrip("/") or "https://sso-m-hero.41box.com") + "/account").strip()
++
+     def _common(conn, request: Request, date: str | None, user=None, *, need_snapshot: bool = True, **extra) -> dict:
+         snaps = snapshots(conn)
+         if need_snapshot or snaps:
+@@ -171,6 +175,8 @@
+             "csrf": getattr(user, "csrf", ""), "is_admin": bool(user and user.role == "admin"),
+             "stores_synced_at": get_meta(conn, "stores_directory_synced_at") or get_meta(conn, "stores_synced_at"),
+             "can_change_password": bool(user and backend.manages_users and user.auth_source == "local"),
++            # SSO (OIDC) users manage their password in the IdP's personal center (Casdoor /account)
++            "account_url": _sso_account_url() if user and not backend.manages_users else "",
+             "mode": config.region_mode(), "table_titles": TABLE_TITLES, "datasets": DATASETS, **extra,
+         }
+ 
+--- a/mhero_district_form/reportdb/templates/base.html
++++ b/mhero_district_form/reportdb/templates/base.html
+@@ -105,6 +105,7 @@
+       {% if user %}<div class="mi right {{ 'on' if P.startswith('/account') }}"><button type="button" aria-haspopup="true" aria-expanded="false">{{ user.display_name }}</button>
+         <div class="dd" role="menu"><div class="who">{{ {'admin':'管理员','supervisor':'督导'}.get(user.role,'查看者') }}{% if user.auth_source and user.auth_source != 'local' %} · 单点登录{% endif %}</div>
+           {% if can_change_password %}<a href="/account/password" class="{{ 'cur' if P.startswith('/account') }}">修改密码</a><hr>{% endif %}
++          {% if account_url %}<a id="sso-account-link" href="{{ account_url }}" target="_blank" rel="noopener">账号设置</a><hr>{% endif %}
+           <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="lnk" type="submit">退出登录</button></form></div></div>{% endif %}
+     </nav></div></header>
+   <script>

@@ -1,0 +1,54 @@
+--- a/mhero_district_form/reportdb/auth/oidc.py
++++ b/mhero_district_form/reportdb/auth/oidc.py
+@@ -11,7 +11,7 @@
+   REPORTDB_OIDC_ADMIN_USERS     逗号分隔的用户名，映射为 admin
+   REPORTDB_OIDC_ADMIN_GROUPS / REPORTDB_OIDC_SUPERVISOR_GROUPS（或 _SUPERVISOR_USERS） / REPORTDB_OIDC_FULL_DETAIL_GROUPS
+                                 逗号分隔，匹配 userinfo 里的 groups/roles（Casdoor 的角色名如 supervisor）。督导的负责门店按其显示名匹配多维表格「督导」
+-未列入的用户默认为 viewer（可看表、明细脱敏）。
++未列入的用户默认为 viewer（可看表、明细脱敏）；设 REPORTDB_OIDC_REQUIRE_ROLE=1 则直接拒绝（生产：只有 督导/管理员 两种角色）。
+ """
+ from __future__ import annotations
+ 
+@@ -34,7 +34,8 @@
+ 
+ def _http_json(url: str, data: dict | None = None, headers: dict | None = None, timeout: float = 15) -> dict:
+     body = urllib.parse.urlencode(data).encode() if data is not None else None
+-    req = urllib.request.Request(url, data=body, headers=headers or {})
++    # Cloudflare in front of the IdP rejects Python's default User-Agent (HTTP 403 / error 1010)
++    req = urllib.request.Request(url, data=body, headers={"User-Agent": "mhero-reportdb/1.0", **(headers or {})})
+     with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+         return json.loads(resp.read().decode())
+ 
+@@ -94,6 +95,9 @@
+         full = is_admin or bool(groups & _csv("REPORTDB_OIDC_FULL_DETAIL_GROUPS"))
+         is_sup = username in _csv("REPORTDB_OIDC_SUPERVISOR_USERS") or bool(groups & _csv("REPORTDB_OIDC_SUPERVISOR_GROUPS"))
+         role = "admin" if is_admin else ("supervisor" if is_sup else "viewer")  # admin 优先
++        if os.getenv("REPORTDB_OIDC_REQUIRE_ROLE", "0").strip().lower() in ("1", "true", "yes", "on") and role == "viewer":
++            # 统一登录只有 督导(supervisor) / 管理员(admin) 两种角色；没有被授予任何一个的账号不建本地用户、不发会话
++            raise AuthError("你的账号没有访问本系统的权限，请联系管理员。", 403)
+         return Identity(username, str(info.get("displayName") or info.get("name") or username), role, full, "oidc")
+ 
+     def complete_login(self, conn, request):
+--- a/mhero_district_form/tests/test_reportdb_auth.py
++++ b/mhero_district_form/tests/test_reportdb_auth.py
+@@ -232,3 +232,20 @@
+             continue
+         names = {d.call.__name__ for d in r.dependant.dependencies}
+         assert names & {"login_required", "admin_required", "requester_required"}, path
++
++
++def test_oidc_require_role_rejects_unmapped(monkeypatch):
++    monkeypatch.setenv("REPORTDB_OIDC_ISSUER", "https://sso.example.test")
++    monkeypatch.setenv("REPORTDB_OIDC_CLIENT_ID", "cid")
++    monkeypatch.setenv("REPORTDB_OIDC_REDIRECT_URI", "https://r.example.test/auth/oidc/callback")
++    monkeypatch.setenv("REPORTDB_OIDC_ADMIN_GROUPS", "mhero-admin")
++    monkeypatch.setenv("REPORTDB_OIDC_SUPERVISOR_GROUPS", "mhero-supervisor")
++    be = OidcBackend(lambda: None)
++    assert be.map_identity({"name": "a", "roles": ["mhero-admin"]}).role == "admin"
++    assert be.map_identity({"name": "s", "roles": ["mhero-supervisor"]}).role == "supervisor"
++    assert be.map_identity({"name": "n", "roles": []}).role == "viewer"          # legacy default (flag off)
++    monkeypatch.setenv("REPORTDB_OIDC_REQUIRE_ROLE", "1")
++    with pytest.raises(AuthError) as e:
++        be.map_identity({"name": "n", "roles": ["mhero-viewer"]})
++    assert e.value.status == 403
++    assert be.map_identity({"name": "s", "roles": ["mhero-supervisor"]}).role == "supervisor"
