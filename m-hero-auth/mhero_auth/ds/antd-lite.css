@@ -11,7 +11,7 @@
           （reportdb 顶栏历史 class .topbar/.menu/.mi/.dd 在此节与 ant-* 共享同一组规则）
        5  ant-page-header
        6  ant-card
-       7  ant-btn（default/primary/dashed/text/link/danger · sm/lg/icon）
+       7  ant-btn（default/primary/dashed/text/link/danger · sm/lg/icon · loading）
        8  数据录入：ant-input / ant-select / ant-checkbox / ant-form-item / ant-filter-bar
         9  ant-table（small / sticky-first / zebra / wrap 横向滚动 + 表头粘性
            + 9.6 移动端卡片化 ant-table-cards，配 cards.js，<=768px）
@@ -27,6 +27,8 @@
        19 移动端全局适配（<=768px：44px 触控 / filter-bar 纵向堆叠 / actions 换行）
        20 打印
        21 兼容层：reportdb 旧模板 class（.card/.btn/.filters/.tw/.sticky1/... ）映射
+       22 ant-spin（区块加载；四点指示器，主色 #1677ff）
+       23 ant-message（顶部轻提示：success / error / info / warning / loading）
    · 移动端断点：导航 <=860px 变汉堡（与顶栏 JS 的 matchMedia 861px 对齐）；
      其余 <=768px（覆盖 360 / 390 / 414 宽），可点击控件最小高度 44px。
    ========================================================================== */
@@ -103,11 +105,12 @@
   --ant-control-height-lg: 40px;
   --ant-control-height-mobile: 44px;
 
-  /* ---- z-index 规范：粘性列 1 · 粘性表头 5 · 顶栏 30 · 下拉 40 ---- */
+  /* ---- z-index 规范：粘性列 1 · 粘性表头 5 · 顶栏 30 · 下拉 40 · 轻提示 1010 ---- */
   --ant-z-sticky-col: 1;
   --ant-z-sticky-header: 5;
   --ant-z-topbar: 30;
   --ant-z-dropdown: 40;
+  --ant-z-message: 1010;
 
   /* ---- 顶栏 ---- */
   --ant-header-height: 46px;   /* antd 水平导航高度 + 底部 1px 分割 */
@@ -569,6 +572,45 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.4; }
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* loading：保持按钮本色，整体 65% 透明度 + 旋转图标（antd Button loading，不用禁用灰底） */
+.ant-btn.ant-btn-loading,
+a.ant-btn-loading {
+  opacity: .65;
+  cursor: default;
+}
+.ant-btn.ant-btn-loading.is-locked,
+a.ant-btn-loading.is-locked { pointer-events: none; }
+.ant-btn.ant-btn-loading[disabled],
+.ant-btn.ant-btn-loading[disabled]:hover,
+.ant-btn.ant-btn-loading[disabled]:active {
+  opacity: .65;
+  cursor: default;
+  color: var(--ant-color-text);
+  background: var(--ant-color-bg-container);
+  border-color: var(--ant-color-border);
+}
+.ant-btn-primary.ant-btn-loading[disabled],
+.ant-btn-primary.ant-btn-loading[disabled]:hover,
+.ant-btn-primary.ant-btn-loading[disabled]:active {
+  color: #fff;
+  background: var(--ant-primary);
+  border-color: var(--ant-primary);
+}
+.ant-btn-danger.ant-btn-loading[disabled],
+.ant-btn-danger.ant-btn-loading[disabled]:hover,
+.ant-btn-danger.ant-btn-loading[disabled]:active {
+  color: #cf1322;
+  background: var(--ant-color-bg-container);
+  border-color: var(--ant-error);
+}
+.ant-btn-loading-icon { display: inline-flex; line-height: 0; }
+.ant-btn-loading [data-fb-hidden] { display: none; }
+.anticon-spin {
+  transform-origin: center;
+  animation: antSpinCircle 1s linear infinite;
+}
+@keyframes antSpinCircle { to { transform: rotate(360deg); } }
 
 /* ==========================================================================
    8. 数据录入：ant-input / ant-select / ant-checkbox / ant-form-item / ant-filter-bar
@@ -1523,4 +1565,146 @@ td.row-action { text-align: right; white-space: nowrap; }
   table.sticky1 td.row-action, table.sticky1 th.row-action-h { position: sticky; right: 0; width: 112px; min-width: 112px; z-index: 3; background: var(--ant-color-bg-container, #fff); box-shadow: -1px 0 0 var(--ant-color-split, #f0f0f0); }
   table.sticky1 td.row-reason, table.sticky1 th.row-reason-h { position: sticky; right: 112px; z-index: 3; background: var(--ant-color-bg-container, #fff); box-shadow: -1px 0 0 var(--ant-color-split, #f0f0f0); }
   table.sticky1 th.row-action-h, table.sticky1 th.row-reason-h { z-index: 6; }
+}
+
+/* ==========================================================================
+   22. ant-spin（Ant Design Spin：四点指示器，颜色跟随 currentColor = 主色）
+   ========================================================================== */
+.ant-spin {
+  color: var(--ant-primary);
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1;
+}
+.ant-spin-nested-loading { position: relative; }
+.ant-spin-nested-loading > .ant-spin {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: none;
+  width: 100%;
+  height: 100%;
+  max-height: 400px;
+}
+.ant-spin-nested-loading > .ant-spin.ant-spin-spinning { display: block; }
+.ant-spin-nested-loading > .ant-spin .ant-spin-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -10px;
+}
+.ant-spin-nested-loading > .ant-spin .ant-spin-text {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  margin-top: 16px;
+  font-size: var(--ant-font-size-base);
+  color: var(--ant-primary);
+  text-shadow: 0 1px 2px #fff;
+}
+.ant-spin-container { position: relative; transition: opacity .3s; }
+.ant-spin-blur {
+  opacity: .5;
+  user-select: none;
+  pointer-events: none;
+}
+.ant-spin-dot {
+  position: relative;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+}
+.ant-spin-dot-item {
+  position: absolute;
+  display: block;
+  width: 9px;
+  height: 9px;
+  background: currentColor;
+  border-radius: 100%;
+  transform: scale(.75);
+  transform-origin: 50% 50%;
+  opacity: .3;
+  animation: antSpinMove 1s infinite linear alternate;
+}
+.ant-spin-dot-item:nth-child(1) { top: 0; left: 0; }
+.ant-spin-dot-item:nth-child(2) { top: 0; right: 0; animation-delay: .4s; }
+.ant-spin-dot-item:nth-child(3) { right: 0; bottom: 0; animation-delay: .8s; }
+.ant-spin-dot-item:nth-child(4) { bottom: 0; left: 0; animation-delay: 1.2s; }
+.ant-spin-dot-spin {
+  transform: rotate(45deg);
+  animation: antRotate 1.2s infinite linear;
+}
+.ant-spin-sm .ant-spin-dot { width: 14px; height: 14px; font-size: 14px; }
+.ant-spin-sm .ant-spin-dot-item { width: 6px; height: 6px; }
+.ant-page-header-meta .ant-spin {
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: -2px;
+}
+.ant-spin[hidden] { display: none !important; }
+@keyframes antSpinMove { to { opacity: 1; } }
+@keyframes antRotate { to { transform: rotate(405deg); } }
+
+/* ==========================================================================
+   23. ant-message（顶部轻提示。短结果用 message，不另做自定义动效库）
+   ========================================================================== */
+.ant-message {
+  position: fixed;
+  top: 8px;
+  left: 0;
+  right: 0;
+  z-index: var(--ant-z-message);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.ant-message-notice {
+  padding: 8px;
+  text-align: center;
+  animation: antMessageMoveIn .3s cubic-bezier(.78, .14, .15, .86);
+}
+.ant-message-notice-leave {
+  animation: antMessageMoveOut .2s cubic-bezier(.78, .14, .15, .86) forwards;
+}
+.ant-message-notice-content {
+  display: inline-block;
+  max-width: min(480px, calc(100vw - 32px));
+  padding: 9px 12px;
+  background: #fff;
+  border-radius: var(--ant-radius-lg);
+  box-shadow: var(--ant-shadow-dropdown);
+  pointer-events: all;
+  text-align: left;
+}
+.ant-message-custom-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--ant-font-size-base);
+  line-height: 1.5714;
+  color: var(--ant-color-text);
+}
+.ant-message-custom-content .ai,
+.ant-message-custom-content .anticon-spin { font-size: 16px; margin-top: 3px; }
+.ant-message-success .ai { color: var(--ant-success); }
+.ant-message-error .ai { color: var(--ant-error); }
+.ant-message-warning .ai { color: var(--ant-warning); }
+.ant-message-info .ai,
+.ant-message-loading .anticon-spin { color: var(--ant-primary); }
+.ant-message-text { min-width: 0; }
+@keyframes antMessageMoveIn {
+  0% { transform: translateY(-100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes antMessageMoveOut {
+  0% { opacity: 1; max-height: 150px; }
+  100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .anticon-spin, .ant-spin-dot-spin, .ant-spin-dot-item, .ant-message-notice, .ant-message-notice-leave {
+    animation: none;
+  }
 }

@@ -1,4 +1,4 @@
-"""设计系统资源读取（antd-lite.css / sprite.svg 的本地副本）。
+"""设计系统资源读取（antd-lite.css / sprite.svg / feedback.js 的本地副本）。
 
 hub、userbar、reportdb 等子系统统一从这里取样式与图标 sprite：
     from mhero_auth.ds import css, sprite
@@ -33,6 +33,11 @@ def sprite() -> str:
 def cards() -> str:
     """移动端表格卡片化 JS（</body> 前内联：<script>{{ cards()|safe }}</script>）。"""
     return _read("cards.js")
+
+
+def feedback() -> str:
+    """按钮 loading / Spin / message 轻提示（</body> 前内联：<script>{{ feedback()|safe }}</script>）。"""
+    return _read("feedback.js")
 
 
 @lru_cache(maxsize=16)

@@ -23,6 +23,7 @@ for t in "${TARGETS[@]}"; do
   mkdir -p "$t/brand"
   install -m 644 "$SRC/antd-lite.css" "$t/antd-lite.css"
   install -m 644 "$SRC/cards.js" "$t/cards.js"
+  install -m 644 "$SRC/feedback.js" "$t/feedback.js"
   install -m 644 "$SRC/sprite.svg" "$t/sprite.svg"
   for f in $BRAND_FILES; do
     install -m 644 "$SRC/brand/$f" "$t/brand/$f"
