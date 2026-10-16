@@ -56,3 +56,7 @@ def test_burger_api_and_auto_insert_contract():
     # 顶栏包含块防护：移动端剥离 transform/filter/backdrop-filter，fixed 抽屉不被裁剪
     mobile = css.split("@media (max-width: 860px)", 1)[1]
     assert "backdrop-filter: none !important" in mobile
+    # 汉堡必须顶栏最右：移动端 margin-left:auto + order:999（不再靠品牌一侧）
+    assert "margin-left: auto" in mobile
+    assert "order: 999" in mobile
+    assert "靠品牌一侧" not in mobile
