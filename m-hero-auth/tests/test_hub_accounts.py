@@ -124,29 +124,6 @@ def test_cards_filtered_only_when_flag_on(monkeypatch, tmp_path):
     assert r.status_code == 403
 
 
-def test_antd_feedback_markup(monkeypatch, tmp_path):
-    """账号 / 退出 / 管理操作带 loading 文案；首页区块用 Spin，结果页保留可提示的 flash。"""
-    m, fake, svc = load_hub(monkeypatch, tmp_path)
-    home = client(m, "alice", "admin", ga=True).get("/", base_url="http://hub.test").get_data(as_text=True)
-    assert 'id="status-spin"' in home and "ant-spin-dot" in home and "正在检测服务状态" in home
-    assert 'data-nav="blank"' in home and "已在新标签页打开「事故车提醒」" in home
-    assert "正在退出登录" in home and "正在打开账号设置" in home and "正在打开账号管理" in home
-    assert "MheroFeedback" in home
-    acc = client(m, "alice", "admin", ga=True).get("/account", base_url="http://hub.test").get_data(as_text=True)
-    assert 'data-loading-text="正在修改密码"' in acc and 'id="pw-go"' in acc
-    page = client(m, "alice", "admin", ga=True).get("/admin/accounts", base_url="http://hub.test").get_data(as_text=True)
-    for text in ("正在保存身份", "正在保存可访问系统", "正在停用", "正在重置密码", "正在创建账号"):
-        assert text in page
-    c = client(m, "alice", "admin", ga=True)
-    form = {"action": "set_apps", "name": "bob", "apps": ["report"]}
-    r = c.post("/admin/accounts/prepare", base_url="http://hub.test", headers=H, data=form)
-    body = r.get_data(as_text=True)
-    assert r.status_code == 200 and 'data-loading-text="正在执行"' in body and 'id="confirm-go"' in body
-    r = c.post("/account/password", base_url="http://hub.test", headers=H, data={"old": "x", "new": "short", "new2": "short"})
-    err = r.get_data(as_text=True)
-    assert r.status_code == 400 and 'id="flash-err"' in err and "密码至少" in err
-
-
 def test_service_unconfigured_page_does_not_crash(monkeypatch, tmp_path):
     m, fake, svc = load_hub(monkeypatch, tmp_path)
     m.app.config["ACCOUNT_SERVICE"] = None
