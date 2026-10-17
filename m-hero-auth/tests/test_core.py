@@ -268,3 +268,44 @@ def test_userbar_and_account_url(env, oidc):
     from mhero_auth.core import AuthConfig
     assert AuthConfig.from_env("hub", env={"SSO_ACCOUNT_URL": "https://x/acct"}).account_url == "https://x/acct"
     assert AuthConfig.from_env("hub", env={"MHERO_AUTH_ACCOUNT_URL": "https://y/a", "SSO_ACCOUNT_URL": "https://x"}).account_url == "https://y/a"
+
+
+def test_browser_probe_does_not_start_login(env):
+    """Unauthenticated favicon must 404, not overwrite the OAuth state cookie."""
+    a = mk(env)
+    d = a._login(R(path="/_auth/login"))
+    st_cookie = d.set_cookies[0]
+    name, val = st_cookie.split(";")[0].split("=", 1)
+    # While a login is in flight, a favicon probe must not redirect to /_auth/login.
+    probe = a.authorize(R(path="/favicon.ico", cookies={name: val}))
+    assert probe.status == 404 and probe.kind == "deny"
+    assert not probe.set_cookies
+    # apple-touch too
+    assert a.authorize(R(path="/apple-touch-icon.png")).status == 404
+
+
+def test_state_cookie_cleared_with_auth_path(env, oidc):
+    a = mk(env)
+    cb = login(a, oidc)
+    clears = [c for c in cb.set_cookies if c.startswith(a.cfg.cookie_name + "_st=")]
+    assert clears, "expected state-cookie clear"
+    assert "Path=/_auth" in clears[0]
+    assert "Max-Age=0" in clears[0]
+
+
+def test_favicon_next_sanitized(env):
+    a = mk(env)
+    d = a._login(R(path="/_auth/login", query={"next": "/favicon.ico"}))
+    q = dict(up.parse_qsl(up.urlparse(d.location).query))
+    # next is inside the signed cookie, not the authorize URL; reopen via unsign
+    name, val = d.set_cookies[0].split(";")[0].split("=", 1)
+    st = a._unsign(val)
+    assert st["next"] == "/"
+
+
+def test_login_state_fail_has_retry_html(env):
+    a = mk(env)
+    d = a._callback(R(path="/_auth/callback", query={"code": "c", "state": "x"}))
+    assert d.status == 400
+    assert d.html and "/_auth/login" in d.html
+    assert "invalid or expired login state" in d.body
