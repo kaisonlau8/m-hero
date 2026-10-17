@@ -35,6 +35,18 @@ APP_ID_OF = {"reportdb": "report"}     # app_name used in init_app -> system id
 APP_ROLE_PREFIX = "app-"               # role name = role_prefix + "app-" + id  (mhero-app-report)
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 AUTH_PREFIX = "/_auth"
+# Browsers auto-request these without a page navigation. Treating them as protected
+# would 302 → /_auth/login and overwrite the single OAuth state cookie (mh_*_st),
+# which is the main cause of intermittent "invalid or expired login state".
+BROWSER_PROBE_PATHS = frozenset({
+    "/favicon.ico",
+    "/apple-touch-icon.png",
+    "/apple-touch-icon-precomposed.png",
+    "/apple-touch-icon-120x120.png",
+    "/apple-touch-icon-152x152.png",
+    "/apple-touch-icon-167x167.png",
+    "/apple-touch-icon-180x180.png",
+})
 
 
 def _b64e(b: bytes) -> str:
@@ -244,8 +256,9 @@ class Authenticator:
             parts.append(f"Domain={self.cfg.cookie_domain}")
         return "; ".join(parts)
 
-    def _clear(self, name: str) -> str:
-        return self._cookie(name, "", 0)
+    def _clear(self, name: str, path: str = "/") -> str:
+        # Path must match the cookie that was set; mh_*_st uses Path=/_auth.
+        return self._cookie(name, "", 0, path)
 
     def session_from(self, req: Request) -> Session | None:
         tok = req.cookies.get(self.cfg.cookie_name)
@@ -367,6 +380,9 @@ class Authenticator:
         if s and self.cfg.require_app and not s.has_apps:
             s = None        # old cookie without app info: send through login once (silent SSO) so it is re-minted
         if not s:
+            # Never start OAuth for browser chrome probes — that overwrites mh_*_st mid-login.
+            if req.method in ("GET", "HEAD") and req.path in BROWSER_PROBE_PATHS:
+                return Decision("deny", 404, body="not found")
             if self.wants_json(req):
                 return Decision("deny", 401, json_body={"error": "unauthorized", "login": self.cfg.base_url + AUTH_PREFIX + "/login"})
             nxt = req.path + (("?" + urllib.parse.urlencode(req.query)) if req.query else "")
@@ -482,7 +498,8 @@ class Authenticator:
         return tuple(sorted(apps)), ga
 
     def _safe_next(self, nxt: str) -> str:
-        if not nxt or not nxt.startswith("/") or nxt.startswith("//") or "\\" in nxt or nxt.startswith(AUTH_PREFIX):
+        if (not nxt or not nxt.startswith("/") or nxt.startswith("//") or "\\" in nxt
+                or nxt.startswith(AUTH_PREFIX) or nxt.split("?", 1)[0] in BROWSER_PROBE_PATHS):
             return "/"
         return nxt
 
@@ -512,9 +529,23 @@ class Authenticator:
         return Decision("redirect", 302, location=f"{self.cfg.issuer}/login/oauth/authorize?{q}",
                         set_cookies=[self._cookie(self.cfg.cookie_name + "_st", ck, 600, AUTH_PREFIX)])
 
-    def _fail(self, status: int, msg: str) -> Decision:
-        return Decision("deny", status, body=msg, json_body={"error": msg},
+    def _fail(self, status: int, msg: str, *, html: str = "") -> Decision:
+        return Decision("deny", status, body=msg, json_body={"error": msg}, html=html,
                         set_cookies=[])
+
+    def _fail_login_state(self) -> Decision:
+        """State cookie missing/expired/mismatched. Do not clear mh_*_st (another tab may hold a fresh login)."""
+        msg = "invalid or expired login state, please retry"
+        login = AUTH_PREFIX + "/login?next=/"
+        html = (
+            "<!doctype html><meta charset=utf-8><title>登录已失效</title>"
+            "<body style='font-family:system-ui,sans-serif;max-width:32rem;margin:3rem auto;line-height:1.6'>"
+            "<h1 style='font-size:1.25rem'>登录状态已失效</h1>"
+            "<p>可能是登录页停留过久、重复打开了登录页，或浏览器自动请求了图标覆盖了登录凭证。"
+            "请重新登录，不要刷新当前这个回调地址。</p>"
+            f"<p><a href='{login}'>重新登录</a></p></body>"
+        )
+        return self._fail(400, msg, html=html)
 
     def _callback(self, req: Request) -> Decision:
         if not req.query.get("code") and not req.query.get("error") and not req.query.get("state"):
@@ -524,7 +555,15 @@ class Authenticator:
             return self._fail(403, "login failed: " + req.query.get("error", "")[:80])
         if (not st or st.get("app") != self.cfg.app_name or st["exp"] <= self.cfg.clock()
                 or not hmac.compare_digest(st["st"], req.query.get("state", ""))):
-            return self._fail(400, "invalid or expired login state, please retry")
+            log.warning(
+                "mhero_auth[%s] login state rejected: missing=%s app_ok=%s expired=%s state_ok=%s",
+                self.cfg.app_name,
+                not st,
+                bool(st) and st.get("app") == self.cfg.app_name,
+                bool(st) and st.get("exp", 0) <= self.cfg.clock(),
+                bool(st) and hmac.compare_digest(str(st.get("st", "")), req.query.get("state", "")),
+            )
+            return self._fail_login_state()
         code = req.query.get("code")
         if not code:
             return self._fail(400, "missing code")
@@ -542,7 +581,7 @@ class Authenticator:
             d = self._no_app(name=claims.get("displayName") or claims.get("name") or "")
             d.body = "403 你的账号没有访问本系统的权限，请联系管理员。"
             d.json_body = {**(d.json_body or {}), "error": "no role for this app"}
-            d.set_cookies = [self._clear(self.cfg.cookie_name + "_st")]
+            d.set_cookies = [self._clear(self.cfg.cookie_name + "_st", AUTH_PREFIX)]
             return d
         apps, ga = self.apps_from_claims(claims)
         nxt_path = urllib.parse.urlsplit(self._safe_next(st.get("next", "/"))).path
@@ -552,7 +591,7 @@ class Authenticator:
                         "AUDIT would deny: " if self.effective_mode() == "audit" else "", claims.get("name"), self.cfg.app_id)
             if self.effective_mode() != "audit":
                 d = self._no_app(name=claims.get("displayName") or claims.get("name") or "")
-                d.set_cookies = [self._clear(self.cfg.cookie_name + "_st")]
+                d.set_cookies = [self._clear(self.cfg.cookie_name + "_st", AUTH_PREFIX)]
                 return d
         life = min(self.cfg.session_hours * 3600, max(60, claims["exp"] - self.cfg.clock()))
         exp = self.cfg.clock() + life
@@ -562,7 +601,7 @@ class Authenticator:
                          "ap": list(apps), "ga": ga, "iat": self.cfg.clock()})
         return Decision("redirect", 302, location=self._safe_next(st.get("next", "/")),
                         set_cookies=[self._cookie(self.cfg.cookie_name, ck, int(life)),
-                                     self._clear(self.cfg.cookie_name + "_st")])
+                                     self._clear(self.cfg.cookie_name + "_st", AUTH_PREFIX)])
 
     def _logout(self, req: Request) -> Decision:
         clear = [self._clear(self.cfg.cookie_name)]
