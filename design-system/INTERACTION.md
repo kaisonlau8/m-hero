@@ -15,10 +15,22 @@
 - 卡片化继续使用 `data-label` / `data-card-title`，每个数据字段都有名称。纯空态不伪造数据行。
 
 ## 返回、关闭和跳转
-- 除首页外，页面标题左侧提供 `.ds-back`，使用 `i-arrow-left` +「返回」，href 指向固定逻辑上级。编辑回列表、门店详情回门店列表、管理页回首页；不依赖浏览器历史。
+- 桌面（>860px）：标题上方显示 antd Breadcrumb「上级 / 当前页」（`nav.ant-breadcrumb`、`aria-label="面包屑"`、分隔符 `/`，当前页 `aria-current="page"`），不设独立返回按钮。
+- 移动（≤860px）：sticky 子标题栏固定在顶栏下方，最左仅图标 chevron 返回（44×44，`aria-label="返回上级：XXX"`），其后单行标题；页面 h1 视觉隐藏，最右仍是唯一汉堡。`h1` 的隐藏在 CSS 媒体查询内完成，子标题栏空间由模板/CSS 首帧预留，不靠 JS 延迟显示。
+- 点击返回：同源 referrer 且存在历史时 `history.back()`，否则跳固定上级。模板用 `data-ds-back="上级路由"` + `data-ds-back-label="上级名称"` 显式声明上级，不猜测业务动作。
 - 弹窗、抽屉和提示关闭按钮使用 `.ds-close`、`aria-label="关闭"`，桌面热区至少 32×32px、移动至少 40×40px，图标 16px，hover 浅灰底，键盘焦点可见。
 - 普通站内页面链接末尾用 `i-right`；外部系统和新窗口用 `i-export`，`target="_blank" rel="noopener"`。顶栏/侧栏导航菜单、面包屑不加箭头；导航中的当前页、锚点、下载、表单动作和抽屉按钮不冒充页面跳转。
 - 可点击行/单元格应有 hover、pointer 和箭头或下划线，并提供真实链接或 Enter/Space 键盘操作。
+
+## 动效
+- Token：`--ds-motion-fast: .1s` / `--ds-motion-mid: .2s` / `--ds-motion-slow: .3s`，缓动 `cubic-bezier(.23,1,.32,1)`。
+- 页面切换使用 View Transitions；浏览器不支持时首帧淡入（`.ds-page-enter`），不等待数据。
+- 折叠/展开用 WAAPI 高度动画；视口变化时取消动画并清理内联高度，桌面筛选恒展开。原生 `details` 同样处理。
+- 抽屉 `translateX` 滑入，弹窗 `scale + opacity`，遮罩淡入，关闭时反向播放。
+- 异步容器使用骨架屏，占位尺寸与最终内容一致；列表首次渲染前 20 项按 20ms 步进 stagger。
+- 按钮按压 `scale(.97)`；toast / notification 进出场；移动菜单滑入；锚点平滑滚动；sticky 顶栏滚动后加阴影。
+- `prefers-reduced-motion` 下全部动效关闭。
+- 只动画 `transform` / `opacity`，不以高度、位移或延迟显示制造 CLS。
 
 ## 视觉与复用
 - 蓝白 Ant Design，主色 `#1677ff`；图标仅使用本地 sprite，反馈沿用 `feedback.js` 的 message / notification / spin。
