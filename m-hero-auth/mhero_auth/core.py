@@ -538,12 +538,19 @@ class Authenticator:
         msg = "invalid or expired login state, please retry"
         login = AUTH_PREFIX + "/login?next=/"
         html = (
-            "<!doctype html><meta charset=utf-8><title>登录已失效</title>"
+            "<!doctype html><meta charset=utf-8><meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'><title>登录已失效</title>"
             "<body style='font-family:system-ui,sans-serif;max-width:32rem;margin:3rem auto;line-height:1.6'>"
             "<h1 style='font-size:1.25rem'>登录状态已失效</h1>"
             "<p>可能是登录页停留过久、重复打开了登录页，或浏览器自动请求了图标覆盖了登录凭证。"
             "请重新登录，不要刷新当前这个回调地址。</p>"
-            f"<p><a href='{login}'>重新登录</a></p></body>"
+            f"<p><a href='{login}'>重新登录</a></p>"
+            "<script>(function(){if(window.__dsZoomGuard)return;window.__dsZoomGuard=1;var l=0;"
+            "function p(e){if(e.cancelable)e.preventDefault()}"
+            "document.addEventListener('gesturestart',p,{passive:false});"
+            "document.addEventListener('gesturechange',p,{passive:false});"
+            "document.addEventListener('touchend',function(e){var t=e.target;"
+            "if(t&&t.closest&&t.closest('input,select,textarea,label,[contenteditable]'))return;"
+            "var n=Date.now();if(l&&n-l<300){if(e.cancelable)e.preventDefault();l=0;return}l=n},{passive:false})})();</script></body>"
         )
         return self._fail(400, msg, html=html)
 

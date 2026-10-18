@@ -8,7 +8,8 @@
 - 使用 `.ds-collapse`、`data-ds-title="明细名称"` 包裹明细；`cards.js` 创建整行 button，维护 `aria-expanded`、`aria-controls` 和面板 hidden。Enter / Space 可操作，刷新计数不重置用户开合状态。
 - 移动端 ≤860px 的筛选区使用 `.ds-filter`：折叠时显示已生效筛选摘要；桌面展开。表单值、提交和重置逻辑保持原样。
 - 未提交的筛选修改保留原生效摘要并提示「有未应用修改」；即时本地搜索可标记 `data-ds-filter-live`。
-- 原生 `details` 可保留，但 summary 应有名称、计数、箭头；不得把统计卡或主要操作藏入明细。
+- 原生 `details` 可保留，但 summary 应有名称、计数、箭头；不得把统计卡或主要操作藏入明细。计数徽标紧跟在标题文字后（间距约 8px），剩余空间只由最右箭头占用；`.ant-collapse-extra` 等右侧操作区保持靠右。
+- 长面板展开后向下滚动再收起时，若折叠头已被顶栏/子标题栏遮住或滚出视口上方，`cards.js` 将头部平滑滚回固定区下方 8px（`prefers-reduced-motion` 时用 `auto`）；头部仍完整可见则保持视口不动。复位偏移统一取 `--ds-header-h`（存在子标题栏时再加 `--ds-subbar-h`），不得写死像素。
 
 ## 表格和列表
 - 每列有明确表头，操作列统一「操作」，序号列「序号」；不留空 th。分组表头保留层级。
