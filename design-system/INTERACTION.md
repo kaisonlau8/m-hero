@@ -32,6 +32,14 @@
 - `prefers-reduced-motion` 下全部动效关闭。
 - 只动画 `transform` / `opacity`，不以高度、位移或延迟显示制造 CLS。
 
+## 触控反馈
+- 全局 `-webkit-tap-highlight-color: transparent`，不再出现浏览器默认蓝色蒙层。
+- 按下反馈：块状可点区浅灰底 `rgba(0,0,0,.06)`，卡片/表格行用 `#f0f0f0`；深色顶栏内改用 `rgba(255,255,255,.12)`；链接按下变 `#0958d9` 并轻微降透明。
+- 按钮沿用 `scale(.97)`，可点卡片 `scale(.98)`；过渡时长走 `--ds-motion-fast`，按下即时生效。
+- hover 背景只写在 `@media (hover:hover)` 内，触屏抬手后不残留。
+- `:focus-visible` 保留 2px 蓝色描边；`:focus:not(:focus-visible)` 清除点按后的焦点环。
+- `prefers-reduced-motion: reduce` 下取消缩放，保留底色/文字反馈；禁用态无按下反馈。
+
 ## 视觉与复用
 - 蓝白 Ant Design，主色 `#1677ff`；图标仅使用本地 sprite，反馈沿用 `feedback.js` 的 message / notification / spin。
 - 移动端只保留一只汉堡，最右上角 `order:999; margin-left:auto`。
