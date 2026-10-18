@@ -14,6 +14,9 @@ scrm-api/
 NSS_Questionnaire_Reminder/
 assistant_APP_Analysis/
 m-hero-assistant-app/
+m-hero-customer-profile/
+m-hero-stores/
+packages/
 **/.env
 __pycache__/
 *.pyc
