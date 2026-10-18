@@ -24,6 +24,11 @@ for t in "${TARGETS[@]}"; do
   mkdir -p "$t/brand"
   install -m 644 "$SRC/antd-lite.css" "$t/antd-lite.css"
   install -m 644 "$SRC/cards.js" "$t/cards.js"
+  # linebreak.py 只给 Python 侧使用；auth 不需要，避免静态目录多一个可访问文件。
+  case "$t" in
+    */m-hero-auth/*) ;;
+    *) install -m 644 "$SRC/linebreak.py" "$t/linebreak.py" ;;
+  esac
   install -m 644 "$SRC/feedback.js" "$t/feedback.js"
   install -m 644 "$SRC/sprite.svg" "$t/sprite.svg"
   for f in $BRAND_FILES; do
