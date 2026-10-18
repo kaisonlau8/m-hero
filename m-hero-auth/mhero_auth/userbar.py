@@ -50,13 +50,13 @@ body>.nav{padding-right:220px!important}
 #mhero-userbar.open .hb-ico::after{top:6px;transform:rotate(-45deg)}
 @media (max-width:860px){
   body>.nav{padding-right:64px!important}
-  #mhero-userbar{top:6px;right:8px}
+  #mhero-userbar{top:calc(8px + env(safe-area-inset-top,0px));right:12px}
   #mhero-userbar .t{display:none}
-  #mhero-userbar .hb{position:relative;z-index:2;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:1px solid #d9d9d9;border-radius:8px;background:#fff;color:rgba(0,0,0,.88);cursor:pointer}
+  #mhero-userbar .hb{position:relative;z-index:2;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;min-height:40px;max-height:40px;padding:0;border:1px solid #d9d9d9;border-radius:8px;background:#fff;color:rgba(0,0,0,.88);cursor:pointer}
   #mhero-userbar .hb:hover,#mhero-userbar.open .hb{border-color:#1677ff;color:#1677ff}
   #mhero-userbar .mask{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s ease,visibility 0s linear .3s}
   #mhero-userbar.open .mask{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .3s ease,visibility 0s}
-  #mhero-userbar .dd,#mhero-userbar:hover .dd,#mhero-userbar:focus-within .dd{display:flex;flex-direction:column;position:fixed;top:52px;right:0;bottom:0;left:auto;width:min(300px,82vw);min-width:0;margin:0;padding:12px 8px 16px;border-radius:0;border:0;border-left:1px solid rgba(5,5,5,.06);z-index:2;overflow:auto;transform:translateX(100%);visibility:hidden;pointer-events:none;transition:transform .3s cubic-bezier(.23,1,.32,1),visibility 0s linear .3s}
+  #mhero-userbar .dd,#mhero-userbar:hover .dd,#mhero-userbar:focus-within .dd{display:flex;flex-direction:column;position:fixed;top:calc(56px + env(safe-area-inset-top,0px));right:0;bottom:0;left:auto;width:min(300px,82vw);min-width:0;margin:0;padding:12px 8px 16px;border-radius:0;border:0;border-left:1px solid rgba(5,5,5,.06);z-index:2;overflow:auto;transform:translateX(100%);visibility:hidden;pointer-events:none;transition:transform .3s cubic-bezier(.23,1,.32,1),visibility 0s linear .3s}
   #mhero-userbar.open .dd{transform:translateX(0);visibility:visible;pointer-events:auto;transition:transform .3s cubic-bezier(.23,1,.32,1),visibility 0s}
   #mhero-userbar .who{display:flex;align-items:center;gap:8px;padding:4px 12px 10px;font-weight:600}
   #mhero-userbar .who .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
