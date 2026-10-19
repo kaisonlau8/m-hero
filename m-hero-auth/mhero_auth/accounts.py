@@ -1,8 +1,9 @@
 """Account-management policy on top of CasdoorAdmin: who may do what, last-admin / self-lockout guards, audit log,
 force-logout (revoke file) and the two-step confirmation token used by the hub page.
 
-Model: level = exactly one of mhero-admin (管理员) / mhero-supervisor (督导) (global); systems = mhero-app-<id> roles.
-An account can enter system X iff it has mhero-app-X or is a global admin. Initial / reset passwords are ALWAYS typed by the
+Model: level = at most one of mhero-admin (超级管理员) / mhero-readonly-admin (只读管理员) / mhero-supervisor (督导);
+none = 用户 (user). Systems = mhero-app-<id> roles. An account can enter system X iff it has mhero-app-X or is a global
+super / read-only admin. Per-system role overrides (hub-managed JSON file, see roles.py) refine the role inside one system. Initial / reset passwords are ALWAYS typed by the
 admin (never generated); every created / reset account must change its password at first login (Casdoor needUpdatePassword).
 Nothing here ever logs a password.
 """
@@ -16,10 +17,11 @@ import re
 import threading
 import time
 
-from .casdoor_admin import ROLE_ADMIN, ROLE_SUPERVISOR, CasdoorAdmin
+from .casdoor_admin import ROLE_ADMIN, ROLE_READONLY_ADMIN, ROLE_SUPERVISOR, CasdoorAdmin
 from .core import APP_IDS, APP_LABEL, APP_ROLE_PREFIX
+from . import roles as _roles
 
-LEVELS = {"admin": "管理员", "supervisor": "督导"}
+LEVELS = dict(_roles.ROLE_LABEL)        # admin 超级管理员 / readonly_admin 只读管理员 / supervisor 督导 / user 用户
 RESERVED = {"admin", "root", "built-in", "svc-accounts", "system", "anonymous"}   # never creatable / editable here
 NAME_RE = re.compile(r"^(?:[a-z][a-z0-9._-]{2,31}|1[3-9]\d{9})$")   # lowercase-letter-led name, or an 11-digit mobile number
 MIN_PASSWORD = 10
@@ -40,8 +42,9 @@ def check_password(name: str, pw: str) -> None:
 
 class AccountService:
     def __init__(self, client: CasdoorAdmin, *, audit_path: str = "", revoke_path: str = "", secret: str = "",
-                 prefix: str = "mhero-", clock=time.time):
+                 prefix: str = "mhero-", clock=time.time, overrides_path: str | None = None):
         self.c, self.audit_path, self.revoke_path, self.prefix, self.clock = client, audit_path, revoke_path, prefix, clock
+        self.overrides_path = _roles.overrides_path() if overrides_path is None else overrides_path
         self.secret = (secret or os.urandom(32).hex()).encode()
         self._lock = threading.RLock()
 
@@ -50,6 +53,8 @@ class AccountService:
     def r_admin(self): return self.prefix + ROLE_ADMIN
     @property
     def r_sup(self): return self.prefix + ROLE_SUPERVISOR
+    @property
+    def r_ro(self): return self.prefix + ROLE_READONLY_ADMIN
     def r_app(self, a: str): return f"{self.prefix}{APP_ROLE_PREFIX}{a}"
 
     # ------------------------------------------------------------------ read
@@ -57,14 +62,20 @@ class AccountService:
         roles = self.c.list_roles()
         members = {n: {u.split("/", 1)[-1] for u in (r.get("users") or [])} for n, r in roles.items()}
         out = []
+        try:
+            ov = _roles.load_overrides(self.overrides_path)
+        except _roles.OverridesUnavailable:
+            ov = {}                                   # 文件损坏：页面照常显示；各系统按「用户」处理，写入会被拒绝
         for u in self.c.list_users():
             n = u["name"]
             if n in RESERVED or u.get("isDeleted"):
                 continue
-            level = "admin" if n in members.get(self.r_admin, ()) else ("supervisor" if n in members.get(self.r_sup, ()) else "")
+            level = ("admin" if n in members.get(self.r_admin, ()) else "readonly_admin" if n in members.get(self.r_ro, ())
+                     else "supervisor" if n in members.get(self.r_sup, ()) else "user")
             out.append({"name": n, "display": u.get("displayName") or n, "email": u.get("email") or "",
                         "disabled": bool(u.get("isForbidden")), "level": level, "need_update_password": bool(u.get("needUpdatePassword")),
-                        "apps": [a for a in APP_IDS if n in members.get(self.r_app(a), ())], "last_login": u.get("lastSigninTime") or ""})
+                        "apps": [a for a in APP_IDS if n in members.get(self.r_app(a), ())], "last_login": u.get("lastSigninTime") or "",
+                        "app_roles": dict(ov.get(n.lower(), {}))})
         return sorted(out, key=lambda x: (x["level"] != "admin", x["name"]))
 
     def active_admins(self, rows: list[dict] | None = None) -> list[str]:
@@ -129,7 +140,7 @@ class AccountService:
         if not NAME_RE.match(name) or name in RESERVED:
             self._deny(actor, "create", name, "用户名需为 11 位手机号，或 3~32 位小写字母开头（只含小写字母/数字/._-），且不能是保留名")
         if level not in LEVELS:
-            self._deny(actor, "create", name, "身份必须是管理员或督导")
+            self._deny(actor, "create", name, "身份必须是 超级管理员 / 只读管理员 / 督导 / 用户 之一")
         apps = self._apps(apps)
         try:
             check_password(name, password)
@@ -172,7 +183,7 @@ class AccountService:
 
     def set_level(self, actor: str, name: str, level: str) -> None:
         if level not in LEVELS:
-            self._deny(actor, "set_level", name, "身份必须是管理员或督导")
+            self._deny(actor, "set_level", name, "身份必须是 超级管理员 / 只读管理员 / 督导 / 用户 之一")
         with self._lock:
             rows = self.snapshot()
             t = self._find(rows, name)
@@ -185,6 +196,28 @@ class AccountService:
             self._set_level_roles(name, level)
         self.force_logout(name)
         self.audit(actor, "set_level", name, f"{t['level'] or '-'} -> {level}")
+
+    def set_app_role(self, actor: str, name: str, app: str, role: str) -> None:
+        """Per-system role override (role '' = follow the global level). Only meaningful for non-super-admins:
+        a global super admin is super admin everywhere and cannot be overridden (prevents lock-out)."""
+        if app not in APP_IDS:
+            self._deny(actor, "set_app_role", name, "未知系统")
+        if role and role not in _roles.ROLES:
+            self._deny(actor, "set_app_role", name, "角色必须是 超级管理员 / 只读管理员 / 督导 / 用户 之一，或留空跟随统一身份")
+        if not self.overrides_path:
+            self._deny(actor, "set_app_role", name, "未配置 MHERO_AUTH_ROLE_OVERRIDES_FILE，无法保存系统角色")
+        t = self._find(self.snapshot(), name)
+        if t["level"] == "admin":
+            self._deny(actor, "set_app_role", name, "全局超级管理员在所有系统都是超级管理员，不能单独设置")
+        before = t["app_roles"].get(app, "")
+        if before == (role or ""):
+            return
+        try:
+            _roles.write_override(self.overrides_path, name, app, role or None)
+        except (OSError, ValueError) as exc:
+            self._deny(actor, "set_app_role", name, f"保存失败：{exc}")
+        self.force_logout(name)
+        self.audit(actor, "set_app_role", name, f"{app}: {before or '跟随统一身份'} -> {role or '跟随统一身份'}")
 
     def set_apps(self, actor: str, name: str, apps: list[str]) -> None:
         apps = self._apps(apps)
@@ -214,8 +247,10 @@ class AccountService:
         return [a for a in APP_IDS if a in set(apps)]
 
     def _set_level_roles(self, name, level):
-        self.c.set_membership(self.r_admin, name, level == "admin")
-        self.c.set_membership(self.r_sup, name, level == "supervisor")
+        # grant the new level BEFORE revoking others so a super admin is never momentarily without any level
+        order = sorted([(self.r_admin, "admin"), (self.r_ro, "readonly_admin"), (self.r_sup, "supervisor")], key=lambda x: x[1] != level)
+        for role, lvl in order:
+            self.c.set_membership(role, name, level == lvl)
 
     def _set_app_roles(self, name, apps):
         for a in APP_IDS:

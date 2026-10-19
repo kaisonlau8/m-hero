@@ -130,3 +130,31 @@ def test_service_unconfigured_page_does_not_crash(monkeypatch, tmp_path):
     monkeypatch.delenv("MHERO_ADMIN_CRED_FILE", raising=False)
     r = client(m, "alice", "admin", ga=True).get("/admin/accounts", base_url="http://hub.test")
     assert r.status_code == 200 and "账号服务未配置" in r.get_data(as_text=True)
+
+
+def test_roles_phase1_hub(monkeypatch, tmp_path):
+    """只读管理员 / 本系统超级管理员都不能进账号管理；全局超级管理员可设置系统角色（两步确认），写入共享文件。"""
+    m, fake, svc = load_hub(monkeypatch, tmp_path)
+    svc.overrides_path = str(tmp_path / "ov.json")
+    m._auth.cfg.overrides_file = str(tmp_path / "ov.json")
+    fake.seed("carol", "readonly_admin")
+    ro = m.app.test_client(); ro.set_cookie("mh_hub", m._auth._sign({"app": "hub", "sub": "carol", "name": "carol", "dn": "carol", "em": "",
+        "role": "readonly_admin", "exp": time.time() + 3600, "rv": time.time() + 3600, "ap": [], "ga": False, "gr": True, "iat": time.time()}), domain="hub.test")
+    assert ro.get("/", base_url="http://hub.test").status_code == 200                        # read-only admin opens the 黄页
+    assert ro.get("/admin/accounts", base_url="http://hub.test").status_code == 403
+    assert ro.post("/admin/accounts/prepare", base_url="http://hub.test", headers=H, data={"action": "set_level"}).status_code == 403
+    (tmp_path / "ov.json").write_text(json.dumps({"bob": {"hub": "admin"}}))               # per-system super admin of the hub
+    assert client(m, "bob", "supervisor", ["hub"]).get("/admin/accounts", base_url="http://hub.test").status_code == 403
+    (tmp_path / "ov.json").write_text("{}")
+    a = client(m, "alice", "admin", ga=True)
+    page = a.get("/admin/accounts", base_url="http://hub.test").get_data(as_text=True)
+    assert "设置系统角色" in page and "只读管理员" in page
+    form = {"action": "set_app_role", "name": "bob", "app": "nss", "app_role": "admin"}
+    r = a.post("/admin/accounts/prepare", base_url="http://hub.test", headers=H, data=form)
+    tok = re.search(r'name="token" value="([^"]+)"', r.get_data(as_text=True)).group(1)
+    r = a.post("/admin/accounts/execute", base_url="http://hub.test", headers=H, data={**form, "token": tok})
+    assert r.status_code == 302
+    assert json.loads((tmp_path / "ov.json").read_text()) == {"bob": {"nss": "admin"}}
+    # user role (no level) still opens the 黄页 cards and may change own password
+    u = client(m, "dave", "user", ["hub"])
+    assert u.get("/", base_url="http://hub.test").status_code == 200

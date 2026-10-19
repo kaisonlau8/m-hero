@@ -14,7 +14,7 @@ from html import escape
 
 from .ds import sprite_only
 
-ROLE_LABEL = {"admin": "管理员", "supervisor": "督导"}
+from .roles import ROLE_LABEL  # noqa: E402  四级角色中文名
 
 _UB_ICONS = ("i-user", "i-caret-down", "i-setting", "i-team", "i-logout")
 
@@ -97,7 +97,7 @@ def userbar_html(session, cfg, mode: str, accounts_url: str = "", account_url: s
         return ""
     name = escape(session.display or session.name or "")
     role = escape(ROLE_LABEL.get(session.role, session.role))
-    is_admin = session.role == "admin"
+    is_admin = session.role == "admin" and bool(getattr(session, "ga", False))   # 「账号管理」只给全局超级管理员
     items = (f'<a id="mhero-account-link" href="{escape(account_url or cfg.account_url, quote=True)}">'
              f'{_ICON("setting")}账号设置</a>')
     if is_admin and getattr(session, "ga", False) and accounts_url:

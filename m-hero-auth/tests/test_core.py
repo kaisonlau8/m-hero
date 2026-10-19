@@ -58,8 +58,9 @@ def test_supervisor_reads_all_but_cannot_write_admin_can(env, oidc):
 
 def test_old_tier_roles_are_ignored(env, oidc):
     a = mk(env)
-    for n in ("mhero-viewer", "mhero-operator"):
-        assert login(a, oidc, {"roles": [{"name": n}]}).status == 403
+    for n in ("mhero-viewer", "mhero-operator"):          # unknown roles -> plain 用户 (summary pages only; none configured here)
+        c = sess_cookie(a, login(a, oidc, {"roles": [{"name": n}]}))
+        assert a.authorize(R(path="/x", cookies=c)).status == 403
 
 
 def test_revalidation_and_30_day_session(env, oidc):
@@ -82,8 +83,9 @@ def test_revalidation_and_30_day_session(env, oidc):
 
 def test_per_app_role_does_not_leak_to_other_app(env, oidc):
     a = mk(env, "hub")
-    cb = login(a, oidc, {"roles": [{"name": "mhero-nss-admin"}]})
-    assert cb.status == 403 and "没有访问" in cb.body
+    c = sess_cookie(a, login(a, oidc, {"roles": [{"name": "mhero-nss-admin"}]}))   # nss role is just 用户 on the hub
+    d = a.authorize(R(path="/x", cookies=c))
+    assert d.status == 403 and d.json_body["have"] == "user"
 
 
 def test_admin_paths(env, oidc):
