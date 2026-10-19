@@ -21,6 +21,7 @@ import urllib.request
 from .core import APP_IDS, APP_ROLE_PREFIX
 
 ROLE_ADMIN, ROLE_SUPERVISOR = "admin", "supervisor"
+ROLE_READONLY_ADMIN = "readonly-admin"
 
 
 class CasdoorError(Exception):
@@ -113,7 +114,7 @@ class CasdoorAdmin:
     # -- writes
     def ensure_roles(self, prefix: str = "mhero-") -> list[str]:
         have, made = self.list_roles(), []
-        want = {prefix + ROLE_ADMIN: "管理员", prefix + ROLE_SUPERVISOR: "督导",
+        want = {prefix + ROLE_ADMIN: "超级管理员", prefix + ROLE_READONLY_ADMIN: "只读管理员", prefix + ROLE_SUPERVISOR: "督导",
                 **{f"{prefix}{APP_ROLE_PREFIX}{a}": f"系统权限：{a}" for a in APP_IDS}}
         for name, disp in want.items():
             if name not in have:

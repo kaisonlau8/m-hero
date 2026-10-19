@@ -43,7 +43,7 @@ def test_callback_denial_has_name_and_page(env, oidc):
     cb = login(a, oidc, {"roles": [{"name": "mhero-supervisor"}, {"name": "mhero-app-report"}], "displayName": "李四"})
     assert cb.status == 403 and "李四" in cb.html and "返回黄页" in cb.html
     nr = login(a, oidc, {"roles": [], "displayName": "王五"})            # no role at all
-    assert nr.status == 403 and "王五" in nr.html and nr.json_body["error"] == "no role for this app"
+    assert nr.status == 403 and "王五" in nr.html and nr.json_body["error"] == "no access to this system"   # 用户 without the app role
 
 
 def test_flask_adapter_html_vs_json(env, oidc, monkeypatch):

@@ -13,8 +13,9 @@ class FakeCasdoor:
 
     def seed(self, name, level="", apps=(), disabled=False, display=None):
         self.users[name] = {"name": name, "displayName": display or name, "isForbidden": disabled, "needUpdatePassword": False, "email": ""}
-        if level:
-            self.roles.setdefault(f"mhero-{level}", set()).add(name)
+        if level and level != "user":
+            from mhero_auth.roles import LEVEL_ROLE_SUFFIX
+            self.roles.setdefault(f"mhero-{LEVEL_ROLE_SUFFIX.get(level, level)}", set()).add(name)
         for a in apps:
             self.roles.setdefault(f"mhero-app-{a}", set()).add(name)
 

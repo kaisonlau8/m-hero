@@ -23,9 +23,10 @@ from typing import Any, Callable
 
 log = logging.getLogger("mhero_auth")
 
-# Two roles only (decision 2026-10-09). supervisor(督导): sees ALL data unmasked, and may call the
-# `supervisor_write_paths` (submit requests). admin: everything, incl. approvals/management/triggers.
-ROLE_LEVEL = {"supervisor": 1, "admin": 2}
+# Four roles (decision 2026-10-19, see roles.py): admin(超级管理员) everything; readonly_admin(只读管理员) reads everything,
+# never writes; supervisor(督导) sees ALL data unmasked and may call `supervisor_write_paths` (submit requests);
+# user(用户) only the summary pages listed in `user_get_paths`. Per-system overrides come from the hub-managed file.
+from .roles import RANK as ROLE_LEVEL, LEVEL_ROLE_SUFFIX, SUFFIX_LEVEL, effective_role  # noqa: E402
 # Per-system access (2026-10-10): Casdoor roles `mhero-app-<id>`. An account may enter system X iff it has
 # mhero-app-X, or is a global admin (mhero-admin). Enforced only when MHERO_AUTH_REQUIRE_APP=1 (default OFF).
 APP_IDS = ("report", "nss", "accident", "vip", "district", "cleaner", "hub")
@@ -86,7 +87,11 @@ class AuthConfig:
     supervisor_write_paths: list[str] = field(default_factory=list)   # ... except these globs (supervisor may submit requests)
     public_paths: list[str] = field(default_factory=list)       # fnmatch globs, any method
     public_get_paths: list[str] = field(default_factory=list)   # fnmatch globs, GET/HEAD only
-    admin_paths: list[str] = field(default_factory=list)        # globs that need admin
+    admin_paths: list[str] = field(default_factory=list)        # globs that need admin (GET also open to readonly_admin)
+    account_paths: list[str] = field(default_factory=list)      # account / permission management: GLOBAL super admin only
+    any_role_paths: list[str] = field(default_factory=list)     # any logged-in account, any method (e.g. change own password)
+    user_get_paths: list[str] = field(default_factory=list)     # summary pages the 用户(user) role may GET (default: none)
+    overrides_file: str = ""              # MHERO_AUTH_ROLE_OVERRIDES_FILE: per-system role overrides written by the hub
     app_exempt_paths: list[str] = field(default_factory=list)   # globs any logged-in account may open even without mhero-app-<id> (REQUIRE_APP); role rules still apply
     service_tokens: dict[str, tuple[str, str]] = field(default_factory=dict)  # token -> (name, role)
     trust_loopback: bool = False          # allow direct 127.0.0.1 calls that did NOT come through a proxy
@@ -137,6 +142,10 @@ class AuthConfig:
             public_paths=_csv(g("PUBLIC_PATHS")),
             public_get_paths=_csv(g("PUBLIC_GET_PATHS")),
             admin_paths=_csv(g("ADMIN_PATHS")),
+            account_paths=_csv(g("ACCOUNT_PATHS")),
+            any_role_paths=_csv(g("ANY_ROLE_PATHS")),
+            user_get_paths=_csv(g("USER_GET_PATHS")),
+            overrides_file=g("ROLE_OVERRIDES_FILE", ""),
             app_exempt_paths=_csv(g("APP_EXEMPT_PATHS")),
             service_tokens=tokens,
             trust_loopback=g("TRUST_LOOPBACK", "0") in ("1", "true", "yes"),
@@ -145,7 +154,8 @@ class AuthConfig:
             account_url=(g("ACCOUNT_URL") or e.get("SSO_ACCOUNT_URL", "")).strip(),
         )
         for k, v in overrides.items():
-            if k in ("public_paths", "public_get_paths", "admin_paths", "supervisor_write_paths"):
+            if k in ("public_paths", "public_get_paths", "admin_paths", "supervisor_write_paths", "account_paths",
+                     "any_role_paths", "user_get_paths"):
                 v = list(getattr(cfg, k)) + list(v)       # code defaults extend env
             setattr(cfg, k, v)
         cfg.mode = cfg.mode.lower()
@@ -190,7 +200,7 @@ class Session:
     name: str
     display: str
     email: str
-    role: str                  # supervisor|admin
+    role: str                  # EFFECTIVE role in this app: admin|readonly_admin|supervisor|user
     exp: float
     rv: float = 0.0            # revalidate-after (epoch); page loads after this go through Casdoor silently
     via: str = "session"       # session | service-token | loopback | auth-off
@@ -198,6 +208,8 @@ class Session:
     ga: bool = False           # global admin (mhero-admin): may enter every system
     iat: float = 0.0           # session issue time (for force-logout via the revoke file)
     has_apps: bool = True      # False for cookies minted before app roles existed -> re-login when REQUIRE_APP is on
+    gr: bool = False           # global read-only admin (mhero-readonly-admin): may enter (read) every system
+    global_role: str = ""      # role from the ID token (before the per-system override)
 
 
 @dataclass
@@ -265,10 +277,13 @@ class Authenticator:
         d = self._unsign(tok) if tok else None
         if not d or d.get("app") != self.cfg.app_name or d.get("exp", 0) <= self.cfg.clock():
             return None
-        s = Session(d["sub"], d["name"], d.get("dn", d["name"]), d.get("em", ""), d["role"], d["exp"], d.get("rv", 0.0),
-                    apps=tuple(d.get("ap") or ()), ga=bool(d.get("ga")), iat=float(d.get("iat") or 0), has_apps="ap" in d)
+        g_role = d.get("role") if d.get("role") in ROLE_LEVEL else "user"
+        s = Session(d["sub"], d["name"], d.get("dn", d["name"]), d.get("em", ""), g_role, d["exp"], d.get("rv", 0.0),
+                    apps=tuple(d.get("ap") or ()), ga=bool(d.get("ga")), iat=float(d.get("iat") or 0), has_apps="ap" in d,
+                    gr=bool(d.get("gr")), global_role=g_role)
         if self.is_revoked(s):
             return None
+        s.role = effective_role(g_role, s.name, self.cfg.app_id, global_admin=s.ga, path=self.cfg.overrides_file)
         return s
 
     # -- force logout (revoke file written by the hub account page): session issued before the entry is void
@@ -303,9 +318,11 @@ class Authenticator:
     def has_access(self, s: Session) -> bool:
         if s.via != "session":
             return True            # service tokens / loopback are not accounts
+        if s.ga or s.gr:
+            return True            # global super / read-only admin: every system
         if self.cfg.app_id == "hub":
-            return s.ga or bool(s.apps)     # the 黄页 is the entry point: any account with at least one system may open it (it only lists their own cards)
-        return s.ga or self.cfg.app_id in s.apps
+            return bool(s.apps)     # the 黄页 is the entry point: any account with at least one system may open it (it only lists their own cards)
+        return self.cfg.app_id in s.apps
 
     # -- policy helpers
     def _match(self, path: str, pats: list[str]) -> bool:
@@ -319,6 +336,9 @@ class Authenticator:
         return req.method in ("GET", "HEAD") and self._match(req.path, self.cfg.public_get_paths)
 
     def required_role(self, req: Request) -> str:
+        """Kept for callers/tests: the minimum role for supervisor/admin style checks (see allowed() for the full rules)."""
+        if self._match(req.path, self.cfg.account_paths):
+            return "admin"
         if self._match(req.path, self.cfg.admin_paths):
             return "admin"
         if req.method in SAFE_METHODS:
@@ -326,6 +346,29 @@ class Authenticator:
         if self._match(req.path, self.cfg.supervisor_write_paths):
             return "supervisor"
         return self.cfg.write_role
+
+    def allowed(self, req: Request, s: Session) -> tuple[bool, str]:
+        """-> (allowed, what is needed). Four roles; readonly_admin never writes; user only GETs user_get_paths."""
+        role, path, safe = s.role, req.path, req.method in SAFE_METHODS
+        if self._match(path, self.cfg.account_paths):
+            return (role == "admin" and s.ga), "global_admin"
+        if self._match(path, self.cfg.admin_paths):
+            return (role == "admin" or (safe and role == "readonly_admin")), "admin"
+        if self._match(path, self.cfg.any_role_paths):
+            return True, ""
+        if safe:
+            if role in ("admin", "readonly_admin"):
+                return True, ""
+            if role == "supervisor" and ROLE_LEVEL.get(self.cfg.read_role, 1) <= ROLE_LEVEL["supervisor"]:
+                return True, ""
+            if role == "user" and (self.cfg.read_role == "user" or self._match(path, self.cfg.user_get_paths)):
+                return True, ""
+            return False, ("supervisor" if role == "user" else self.cfg.read_role)
+        if role == "readonly_admin":
+            return False, "admin"
+        if self._match(path, self.cfg.supervisor_write_paths):
+            return role in ("admin", "supervisor"), "supervisor"
+        return (role == "admin" or (self.cfg.write_role == "supervisor" and role == "supervisor")), "admin"
 
     @staticmethod
     def wants_json(req: Request) -> bool:
@@ -411,10 +454,17 @@ class Authenticator:
                         json_body={"error": "no access to this system", "system": self.cfg.app_id, "hub_url": hub})
 
     def _check_role(self, req: Request, s: Session) -> Decision:
-        need = self.required_role(req)
-        if ROLE_LEVEL[s.role] < ROLE_LEVEL[need]:
+        if s.role not in ROLE_LEVEL:
+            s.role = "user"
+        ok, need = self.allowed(req, s)
+        if not ok:
+            from .roles import ROLE_LABEL
+            lab = {"global_admin": "超级管理员（全局）", **ROLE_LABEL}
+            msg = ("你的账号是「用户」，只能查看汇总页面" if s.role == "user" else
+                   "只读管理员只能查看，不能修改" if s.role == "readonly_admin" and req.method not in SAFE_METHODS else
+                   f"需要 {lab.get(need, need)}，当前角色 {ROLE_LABEL.get(s.role, s.role)}")
             return Decision("deny", 403, json_body={"error": "forbidden", "need": need, "have": s.role},
-                            body=f"403 权限不足：需要 {need}，当前角色 {s.role}", session=s)
+                            body=f"403 权限不足：{msg}", session=s)
         return Decision("allow", session=s)
 
     def _same_origin(self, req: Request) -> bool:
@@ -467,6 +517,7 @@ class Authenticator:
         return claims
 
     def role_from_claims(self, claims: dict) -> str | None:
+        """Global role from the ID token: admin | readonly_admin | supervisor | user. None = not a usable account."""
         if self.cfg.org and claims.get("owner") != self.cfg.org:
             return None
         if claims.get("isForbidden") or claims.get("isDeleted"):
@@ -477,10 +528,11 @@ class Authenticator:
         best = 0
         pfx, app = self.cfg.role_prefix, self.cfg.app_name
         for n in names:
-            for scope in (pfx, f"{pfx}{app}-"):          # global (mhero-admin) or per-app (mhero-hub-supervisor)
-                if n.startswith(scope) and n[len(scope):] in ROLE_LEVEL:
-                    best = max(best, ROLE_LEVEL[n[len(scope):]])
-        return {v: k for k, v in ROLE_LEVEL.items()}.get(best)
+            for scope in (pfx, f"{pfx}{app}-"):          # global (mhero-admin) or legacy per-app Casdoor role (mhero-hub-supervisor)
+                lvl = SUFFIX_LEVEL.get(n[len(scope):]) if n.startswith(scope) else None
+                if lvl:
+                    best = max(best, ROLE_LEVEL[lvl])
+        return {v: k for k, v in ROLE_LEVEL.items()}.get(best, "user")
 
     def apps_from_claims(self, claims: dict) -> tuple[tuple, bool]:
         """-> (systems the account may enter, is_global_admin). Names: mhero-app-<id>; a per-system role of THIS app
@@ -492,8 +544,8 @@ class Authenticator:
         apps = {n[len(pfx) + len(APP_ROLE_PREFIX):] for n in names if n.startswith(pfx + APP_ROLE_PREFIX)}
         apps = {a for a in apps if a in APP_IDS}
         ga = (pfx + "admin") in names
-        for lvl in ROLE_LEVEL:
-            if f"{pfx}{self.cfg.app_name}-{lvl}" in names:
+        for suffix in LEVEL_ROLE_SUFFIX.values():
+            if f"{pfx}{self.cfg.app_name}-{suffix}" in names:
                 apps.add(self.cfg.app_id)
         return tuple(sorted(apps)), ga
 
@@ -517,7 +569,8 @@ class Authenticator:
             if not s:
                 return Decision("deny", 401, json_body={"authenticated": False})
             return Decision("allow", status=200, json_body={"authenticated": True, "name": s.name, "display": s.display,
-                                                            "email": s.email, "role": s.role, "exp": s.exp, "apps": list(s.apps), "global_admin": s.ga}, session=s)
+                                                            "email": s.email, "role": s.role, "global_role": s.global_role, "exp": s.exp, "apps": list(s.apps),
+                                                            "global_admin": s.ga, "global_readonly_admin": s.gr}, session=s)
         return Decision("deny", 404, body="not found", json_body={"error": "not found"})
 
     def _login(self, req: Request) -> Decision:
@@ -591,8 +644,10 @@ class Authenticator:
             d.set_cookies = [self._clear(self.cfg.cookie_name + "_st", AUTH_PREFIX)]
             return d
         apps, ga = self.apps_from_claims(claims)
+        gr = (self.cfg.role_prefix + LEVEL_ROLE_SUFFIX["readonly_admin"]) in {
+            (r.get("name") if isinstance(r, dict) else str(r)) for r in claims.get("roles") or []}
         nxt_path = urllib.parse.urlsplit(self._safe_next(st.get("next", "/"))).path
-        if self.cfg.require_app and not (ga or self.cfg.app_id in apps or (self.cfg.app_id == "hub" and apps)
+        if self.cfg.require_app and not (ga or gr or self.cfg.app_id in apps or (self.cfg.app_id == "hub" and apps)
                                          or self._match(nxt_path, self.cfg.app_exempt_paths)):
             log.warning("mhero_auth[%s] %suser %s has no mhero-app-%s role", self.cfg.app_name,
                         "AUDIT would deny: " if self.effective_mode() == "audit" else "", claims.get("name"), self.cfg.app_id)
@@ -605,7 +660,7 @@ class Authenticator:
         ck = self._sign({"app": self.cfg.app_name, "sub": claims.get("sub", ""), "name": claims.get("name", ""),
                          "dn": claims.get("displayName") or claims.get("name", ""), "em": claims.get("email", ""),
                          "role": role, "exp": exp, "rv": self.cfg.clock() + self.cfg.revalidate_hours * 3600,
-                         "ap": list(apps), "ga": ga, "iat": self.cfg.clock()})
+                         "ap": list(apps), "ga": ga, "gr": gr, "iat": self.cfg.clock()})
         return Decision("redirect", 302, location=self._safe_next(st.get("next", "/")),
                         set_cookies=[self._cookie(self.cfg.cookie_name, ck, int(life)),
                                      self._clear(self.cfg.cookie_name + "_st", AUTH_PREFIX)])
