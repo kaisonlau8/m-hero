@@ -133,3 +133,21 @@ def test_set_app_role(svc, tmp_path):
     for bad in (("adm2", "nss", "user"), ("sup1", "nope", "user"), ("sup1", "nss", "root")):
         with pytest.raises(AccountError):
             s.set_app_role("19893173727", *bad)                             # super admin / unknown system / bad role
+
+
+def test_overrides_fail_safe_and_locked_write(tmp_path):
+    from mhero_auth import roles
+    p = tmp_path / "ov.json"
+    assert roles.override_for("a", "nss", str(p)) is None                    # absent: no overrides
+    roles.write_override(str(p), "A", "nss", "admin")
+    assert roles.override_for("a", "nss", str(p)) == "admin"
+    assert oct(p.stat().st_mode & 0o777) == "0o600"
+    assert not [x for x in tmp_path.iterdir() if x.name.startswith(".overrides-")]
+    p.write_text("{broken")
+    assert roles.override_for("a", "nss", str(p)) == "user"                  # corrupt: fail safe to 用户
+    assert roles.override_for("b", "vip", str(p)) == "user"
+    assert roles.effective_role("supervisor", "b", "vip", global_admin=True, path=str(p)) == "admin"   # 全局超管不受影响
+    import pytest
+    with pytest.raises(ValueError):
+        roles.write_override(str(p), "a", "nss", None)                        # refuses to overwrite a corrupt file
+    assert p.read_text() == "{broken"

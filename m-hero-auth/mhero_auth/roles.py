@@ -12,8 +12,10 @@
 """
 from __future__ import annotations
 
+import fcntl
 import json
 import os
+import tempfile
 import threading
 
 ROLES = ("admin", "readonly_admin", "supervisor", "user")
@@ -33,23 +35,33 @@ def overrides_path(env: dict | None = None) -> str:
     return (e.get("MHERO_AUTH_ROLE_OVERRIDES_FILE") or "").strip()
 
 
+class OverridesUnavailable(Exception):
+    """The overrides file exists but cannot be read / parsed."""
+
+
 def load_overrides(path: str | None = None) -> dict[str, dict[str, str]]:
-    """{account: {app: role}}; cached by mtime; unreadable/missing -> {} (= no overrides, global roles apply)."""
+    """{account: {app: role}}; cached by mtime. Not configured / file absent -> {} (global roles apply).
+    Present but unreadable or corrupt -> OverridesUnavailable (callers fail safe: treat as 用户)."""
     path = overrides_path() if path is None else path
     if not path:
         return {}
     try:
         st = os.stat(path)
-    except OSError:
+    except FileNotFoundError:
         return {}
+    except OSError as exc:
+        raise OverridesUnavailable(str(exc)) from exc
     key = (st.st_mtime_ns, st.st_size, st.st_ino)
     c = _cache.get(path)
     if c and c[0] == key:
         return c[1]
     try:
-        raw = json.load(open(path, encoding="utf-8"))
-    except Exception:  # noqa: BLE001
-        raw = {}
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except Exception as exc:  # noqa: BLE001
+        raise OverridesUnavailable(type(exc).__name__) from exc
+    if not isinstance(raw, dict):
+        raise OverridesUnavailable("not an object")
     data: dict[str, dict[str, str]] = {}
     if isinstance(raw, dict):
         for user, apps in raw.items():
@@ -62,7 +74,11 @@ def load_overrides(path: str | None = None) -> dict[str, dict[str, str]]:
 
 
 def override_for(user: str, app_id: str, path: str | None = None) -> str | None:
-    return load_overrides(path).get((user or "").lower(), {}).get(app_id)
+    """Per-system role, or None. If the file is broken, returns "user" (fail safe: never grants more than 用户)."""
+    try:
+        return load_overrides(path).get((user or "").lower(), {}).get(app_id)
+    except OverridesUnavailable:
+        return "user"
 
 
 def write_override(path: str, user: str, app_id: str, role: str | None) -> dict:
@@ -72,13 +88,15 @@ def write_override(path: str, user: str, app_id: str, role: str | None) -> dict:
     if role and role not in ROLES:
         raise ValueError("bad role")
     user = (user or "").lower()
-    with _lock:
+    with _lock, open(path + ".lock", "a") as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)          # serialise read-modify-write across worker processes
         try:
-            data = json.load(open(path, encoding="utf-8"))
-            if not isinstance(data, dict):
-                data = {}
-        except (OSError, ValueError):
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+        except FileNotFoundError:
             data = {}
+        if not isinstance(data, dict):
+            raise ValueError("单独角色文件格式损坏，已拒绝写入（避免覆盖）")
         mine = dict(data.get(user) or {})
         if role:
             mine[app_id] = role
@@ -88,11 +106,17 @@ def write_override(path: str, user: str, app_id: str, role: str | None) -> dict:
             data[user] = mine
         else:
             data.pop(user, None)
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=1, sort_keys=True)
-        os.chmod(tmp, 0o600)
-        os.replace(tmp, path)
+        fd, tmp = tempfile.mkstemp(prefix=".overrides-", dir=os.path.dirname(os.path.abspath(path)))   # 0600, unique
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=1, sort_keys=True)
+            os.replace(tmp, path)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
     return mine
 
 

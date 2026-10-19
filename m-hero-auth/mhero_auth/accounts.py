@@ -62,6 +62,10 @@ class AccountService:
         roles = self.c.list_roles()
         members = {n: {u.split("/", 1)[-1] for u in (r.get("users") or [])} for n, r in roles.items()}
         out = []
+        try:
+            ov = _roles.load_overrides(self.overrides_path)
+        except _roles.OverridesUnavailable:
+            ov = {}                                   # 文件损坏：页面照常显示；各系统按「用户」处理，写入会被拒绝
         for u in self.c.list_users():
             n = u["name"]
             if n in RESERVED or u.get("isDeleted"):
@@ -71,7 +75,7 @@ class AccountService:
             out.append({"name": n, "display": u.get("displayName") or n, "email": u.get("email") or "",
                         "disabled": bool(u.get("isForbidden")), "level": level, "need_update_password": bool(u.get("needUpdatePassword")),
                         "apps": [a for a in APP_IDS if n in members.get(self.r_app(a), ())], "last_login": u.get("lastSigninTime") or "",
-                        "app_roles": dict(_roles.load_overrides(self.overrides_path).get(n.lower(), {}))})
+                        "app_roles": dict(ov.get(n.lower(), {}))})
         return sorted(out, key=lambda x: (x["level"] != "admin", x["name"]))
 
     def active_admins(self, rows: list[dict] | None = None) -> list[str]:
@@ -208,7 +212,10 @@ class AccountService:
         before = t["app_roles"].get(app, "")
         if before == (role or ""):
             return
-        _roles.write_override(self.overrides_path, name, app, role or None)
+        try:
+            _roles.write_override(self.overrides_path, name, app, role or None)
+        except (OSError, ValueError) as exc:
+            self._deny(actor, "set_app_role", name, f"保存失败：{exc}")
         self.force_logout(name)
         self.audit(actor, "set_app_role", name, f"{app}: {before or '跟随统一身份'} -> {role or '跟随统一身份'}")
 
